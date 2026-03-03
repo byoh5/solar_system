@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Orbitron:wght@600;700&display=swap');
+
+:root {
+  --bg-main: #05070f;
+  --bg-subtle: #0c1324;
+  --line-soft: rgba(173, 199, 255, 0.24);
+  --line-strong: rgba(193, 220, 255, 0.48);
+  --text-main: #ebf2ff;
+  --text-sub: #a8b9d9;
+  --accent: #61c5ff;
+  --accent-strong: #80f0b4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Space Grotesk', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at 15% 10%, #11274d 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, #113531 0%, transparent 35%),
+    linear-gradient(140deg, var(--bg-main) 0%, var(--bg-subtle) 100%);
+}
+
+button,
+input,
+label {
+  font: inherit;
+}
