@@ -6,7 +6,7 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useShallow } from 'zustand/react/shallow'
 import { planetData } from '../data/planetData'
 import { useSolarSystemStore } from '../store/solarSystemStore'
-import { computeCloseupInsights } from '../utils/earthScience'
+import { computeCloseupInsights, getOrbitAngleForSeason } from '../utils/earthScience'
 import { computeOrbitRadius, computePlanetRadius, computeSunRadius } from '../utils/scales'
 import { OrbitRing } from './OrbitRing'
 import { Planet, type PlanetMotionPayload } from './Planet'
@@ -21,10 +21,17 @@ type SceneFramerProps = {
 function SceneFramer({ controlsRef, earthPositionRef, moonPositionRef, fallbackEarthOrbitRadius }: SceneFramerProps) {
   const camera = useThree((state) => state.camera)
   const earthToMoonDirectionRef = useRef(new Vector3())
-  const { frameRequest, mode } = useSolarSystemStore(
+  const earthToSunDirectionRef = useRef(new Vector3())
+  const orbitalLateralDirectionRef = useRef(new Vector3())
+  const closeupOffsetRef = useRef(new Vector3())
+  const closeupFocusRef = useRef(new Vector3())
+  const lastSeasonJumpRequestIdRef = useRef<number | null>(null)
+  const { frameRequest, mode, seasonJumpTarget, seasonJumpRequestId } = useSolarSystemStore(
     useShallow((state) => ({
       frameRequest: state.frameRequest,
       mode: state.mode,
+      seasonJumpTarget: state.seasonJumpTarget,
+      seasonJumpRequestId: state.seasonJumpRequestId,
     })),
   )
 
@@ -36,16 +43,56 @@ function SceneFramer({ controlsRef, earthPositionRef, moonPositionRef, fallbackE
     }
 
     if (mode === 'closeup') {
+      const hasFreshSeasonJump =
+        seasonJumpRequestId > 0 && seasonJumpRequestId !== lastSeasonJumpRequestIdRef.current
+
+      if (hasFreshSeasonJump) {
+        lastSeasonJumpRequestIdRef.current = seasonJumpRequestId
+        const seasonOrbitAngle = getOrbitAngleForSeason(seasonJumpTarget)
+        closeupFocusRef.current.set(
+          Math.cos(seasonOrbitAngle) * fallbackEarthOrbitRadius,
+          0,
+          Math.sin(seasonOrbitAngle) * fallbackEarthOrbitRadius,
+        )
+        earthPositionRef.current.copy(closeupFocusRef.current)
+      }
+
       if (earthPositionRef.current.lengthSq() < 0.01) {
         earthPositionRef.current.set(fallbackEarthOrbitRadius, 0, 0)
       }
 
-      camera.position.set(
-        earthPositionRef.current.x + 10.5,
-        earthPositionRef.current.y + 4.8,
-        earthPositionRef.current.z + 9.5,
-      )
-      controls.target.copy(earthPositionRef.current)
+      if (hasFreshSeasonJump) {
+        closeupFocusRef.current.copy(earthPositionRef.current)
+        earthToSunDirectionRef.current.copy(closeupFocusRef.current).multiplyScalar(-1)
+        if (earthToSunDirectionRef.current.lengthSq() < 1e-5) {
+          earthToSunDirectionRef.current.set(-1, 0, 0)
+        } else {
+          earthToSunDirectionRef.current.normalize()
+        }
+
+        orbitalLateralDirectionRef.current.set(0, 1, 0).cross(earthToSunDirectionRef.current)
+        if (orbitalLateralDirectionRef.current.lengthSq() < 1e-5) {
+          orbitalLateralDirectionRef.current.set(0, 0, 1)
+        } else {
+          orbitalLateralDirectionRef.current.normalize()
+        }
+
+        closeupOffsetRef.current
+          .copy(earthToSunDirectionRef.current)
+          .multiplyScalar(26)
+          .addScaledVector(orbitalLateralDirectionRef.current, 46)
+        closeupOffsetRef.current.y += 24
+
+        camera.position.copy(closeupFocusRef.current).add(closeupOffsetRef.current)
+        controls.target.copy(closeupFocusRef.current)
+      } else {
+        camera.position.set(
+          earthPositionRef.current.x + 10.5,
+          earthPositionRef.current.y + 4.8,
+          earthPositionRef.current.z + 9.5,
+        )
+        controls.target.copy(earthPositionRef.current)
+      }
     } else if (mode === 'mooncloseup') {
       if (earthPositionRef.current.lengthSq() < 0.01) {
         earthPositionRef.current.set(fallbackEarthOrbitRadius, 0, 0)
@@ -76,7 +123,17 @@ function SceneFramer({ controlsRef, earthPositionRef, moonPositionRef, fallbackE
     }
 
     controls.update()
-  }, [camera, controlsRef, earthPositionRef, fallbackEarthOrbitRadius, frameRequest, mode, moonPositionRef])
+  }, [
+    camera,
+    controlsRef,
+    earthPositionRef,
+    fallbackEarthOrbitRadius,
+    frameRequest,
+    mode,
+    moonPositionRef,
+    seasonJumpRequestId,
+    seasonJumpTarget,
+  ])
 
   return null
 }
