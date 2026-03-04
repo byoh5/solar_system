@@ -1,4 +1,4 @@
-import { Text } from '@react-three/drei'
+import { Html, Text } from '@react-three/drei'
 import { useFrame, useLoader, type ThreeEvent } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import {
@@ -215,6 +215,7 @@ export function Planet({
     }),
     [],
   )
+  const realisticLocatorPoint = useMemo(() => new Float32Array([0, 0, 0]), [])
 
   useEffect(() => {
     if (!isEarth) {
@@ -408,6 +409,8 @@ export function Planet({
         : mode === 'closeup'
         ? Math.max(radius * 0.3, 0.35)
         : Math.max(radius * 0.27, 0.2)
+  const realisticLocatorHeight = Math.max(radius * 2.2, 0.42)
+  const realisticLabelHeight = realisticLocatorHeight + 0.44
 
   return (
     <group ref={orbitGroupRef}>
@@ -467,7 +470,7 @@ export function Planet({
               )}
             </group>
 
-            {mode === 'closeup' && (
+            {mode === 'closeup' && !surfaceTemperatureMode && (
               <group ref={tideBulgeRef}>
                 <mesh scale={[1.34, 1.03, 0.82]}>
                   <sphereGeometry args={[radius * 1.1, 32, 32]} />
@@ -565,15 +568,75 @@ export function Planet({
         )}
 
         {showLabel && (
-          <Text
-            position={[0, radius + 0.7, 0]}
-            fontSize={labelSize}
-            color="#dbe7ff"
-            anchorX="center"
-            anchorY="bottom"
-          >
-            {planet.nameKr}
-          </Text>
+          mode === 'realistic' ? (
+            <Html position={[0, realisticLabelHeight, 0]} center style={{ pointerEvents: 'none' }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '2px 8px',
+                  borderRadius: '999px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  letterSpacing: '0.01em',
+                  color: '#e7f1ff',
+                  border: selected ? '1px solid rgba(255, 241, 165, 0.95)' : '1px solid rgba(152, 198, 255, 0.8)',
+                  background: selected ? 'rgba(41, 58, 92, 0.9)' : 'rgba(10, 20, 38, 0.82)',
+                  boxShadow: selected
+                    ? '0 0 14px rgba(255, 230, 143, 0.45)'
+                    : '0 0 10px rgba(120, 175, 255, 0.35)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {planet.nameKr}
+              </span>
+            </Html>
+          ) : (
+            <Text
+              position={[0, radius + 0.7, 0]}
+              fontSize={labelSize}
+              color="#dbe7ff"
+              anchorX="center"
+              anchorY="bottom"
+            >
+              {planet.nameKr}
+            </Text>
+          )
+        )}
+
+        {mode === 'realistic' && (
+          <group position={[0, realisticLocatorHeight, 0]}>
+            <points renderOrder={30}>
+              <bufferGeometry>
+                <bufferAttribute attach="attributes-position" args={[realisticLocatorPoint, 3]} />
+              </bufferGeometry>
+              <pointsMaterial
+                color={planet.color}
+                size={selected ? 11 : 9}
+                sizeAttenuation={false}
+                transparent
+                opacity={0.95}
+                depthTest={false}
+                depthWrite={false}
+                toneMapped={false}
+              />
+            </points>
+            <points renderOrder={31}>
+              <bufferGeometry>
+                <bufferAttribute attach="attributes-position" args={[realisticLocatorPoint, 3]} />
+              </bufferGeometry>
+              <pointsMaterial
+                color="#ffffff"
+                size={selected ? 5.4 : 4.2}
+                sizeAttenuation={false}
+                transparent
+                opacity={0.95}
+                depthTest={false}
+                depthWrite={false}
+                toneMapped={false}
+              />
+            </points>
+          </group>
         )}
       </group>
     </group>
