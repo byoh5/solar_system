@@ -82,12 +82,16 @@ export function Planet({
 }: PlanetProps) {
   const isEarth = planet.id === 'earth'
   const isSaturn = planet.id === 'saturn'
-  const [earthDayMap, earthNormalMap, earthSpecularMap, earthCloudMap] = useLoader(TextureLoader, [
-    '/textures/earth_daymap_2048.jpg',
-    '/textures/earth_normal_2048.jpg',
-    '/textures/earth_specular_2048.jpg',
-    '/textures/earth_clouds_1024.png',
-  ])
+  const earthTexturePaths = useMemo(() => {
+    const prefix = `${import.meta.env.BASE_URL}textures/`
+    return [
+      `${prefix}earth_daymap_2048.jpg`,
+      `${prefix}earth_normal_2048.jpg`,
+      `${prefix}earth_specular_2048.jpg`,
+      `${prefix}earth_clouds_1024.png`,
+    ]
+  }, [])
+  const [earthDayMap, earthNormalMap, earthSpecularMap, earthCloudMap] = useLoader(TextureLoader, earthTexturePaths)
 
   const orbitGroupRef = useRef<Group>(null)
   const planetAnchorRef = useRef<Group>(null)
