@@ -68,11 +68,15 @@ function App() {
           <div className="sceneViewport">
             <SolarSystemScene />
           </div>
-          <LessonVideoLibrary />
         </section>
-        <aside className="sidePanel">
-          <ControlPanel />
-        </aside>
+        <div className="rightRail">
+          <aside className="sidePanel">
+            <ControlPanel />
+          </aside>
+          <section className="videoPanel">
+            <LessonVideoLibrary compact />
+          </section>
+        </div>
       </main>
     </div>
   )

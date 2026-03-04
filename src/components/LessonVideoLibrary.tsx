@@ -1,7 +1,11 @@
 import { useMemo, useState } from 'react'
 import { learningVideos } from '../data/learningVideoData'
 
-export function LessonVideoLibrary() {
+type LessonVideoLibraryProps = {
+  compact?: boolean
+}
+
+export function LessonVideoLibrary({ compact = false }: LessonVideoLibraryProps) {
   const [selectedVideoId, setSelectedVideoId] = useState(learningVideos[0]?.id ?? '')
   const [query, setQuery] = useState('')
 
@@ -22,7 +26,7 @@ export function LessonVideoLibrary() {
     learningVideos.find((video) => video.id === selectedVideoId) ?? learningVideos[0] ?? null
 
   return (
-    <section className="videoDock" aria-label="태양계 학습 영상">
+    <section className={`videoDock ${compact ? 'compact' : ''}`} aria-label="태양계 학습 영상">
       <div className="videoDockHeader">
         <div className="videoDockTitle">
           <p className="videoDockEyebrow">Learning Videos</p>
