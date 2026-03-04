@@ -62,7 +62,7 @@ function OrbitalOverview({
   const earthRadius = 58
   const moonRadius = 26
   const earthAngle = normalizeAngle(earthOrbitAngle)
-  const moonAngle = normalizeAngle(moonOrbitAngle)
+  const moonAngle = normalizeAngle(earthOrbitAngle + moonOrbitAngle)
 
   const earthPos = {
     x: sunCenter.x + Math.cos(earthAngle) * earthRadius,
