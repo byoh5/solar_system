@@ -261,6 +261,22 @@ input[type='range'] {
   gap: 0.38rem;
 }
 
+.dateJumpRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+  align-items: center;
+}
+
+.dateInput {
+  border: 1px solid rgba(151, 202, 255, 0.45);
+  border-radius: 999px;
+  background: rgba(14, 35, 66, 0.64);
+  color: #d9e7ff;
+  padding: 0.26rem 0.62rem;
+  font-size: 0.8rem;
+}
+
 .seasonJumpButton {
   border: 1px solid rgba(151, 202, 255, 0.45);
   border-radius: 999px;

@@ -13,7 +13,7 @@ import {
 } from 'three'
 import type { PlanetData } from '../data/planetData'
 import type { CloseupSeason, DisplayMode, MoonPhaseTarget } from '../store/solarSystemStore'
-import { getMoonOrbitAngleForPhase, getOrbitAngleForSeason } from '../utils/earthScience'
+import { computeOrbitAnglesForDate, getMoonOrbitAngleForPhase, getOrbitAngleForSeason } from '../utils/earthScience'
 
 export type PlanetMotionPayload = {
   planetId: PlanetData['id']
@@ -37,6 +37,8 @@ type PlanetProps = {
   seasonJumpRequestId: number
   moonPhaseJumpTarget: MoonPhaseTarget
   moonPhaseJumpRequestId: number
+  dateAnchorISO: string
+  dateJumpRequestId: number
   onSelect: (planetId: PlanetData['id']) => void
   onMotionUpdate?: (payload: PlanetMotionPayload) => void
 }
@@ -151,6 +153,8 @@ export function Planet({
   seasonJumpRequestId,
   moonPhaseJumpTarget,
   moonPhaseJumpRequestId,
+  dateAnchorISO,
+  dateJumpRequestId,
   onSelect,
   onMotionUpdate,
 }: PlanetProps) {
@@ -250,6 +254,37 @@ export function Planet({
       moonOrbitGroup.rotation.y = targetMoonOrbitAngle
     }
   }, [isEarth, moonPhaseJumpRequestId, moonPhaseJumpTarget])
+
+  useEffect(() => {
+    if (!isEarth) {
+      return
+    }
+
+    const targetDate = new Date(`${dateAnchorISO}T12:00:00`)
+    if (Number.isNaN(targetDate.getTime())) {
+      return
+    }
+
+    const { earthOrbitAngle, moonOrbitAngle } = computeOrbitAnglesForDate(targetDate)
+    orbitAngleRef.current = earthOrbitAngle
+    moonOrbitAngleRef.current = moonOrbitAngle
+
+    const orbitGroup = orbitGroupRef.current
+    if (orbitGroup) {
+      orbitGroup.rotation.y = earthOrbitAngle
+    }
+
+    const moonOrbitGroup = moonOrbitGroupRef.current
+    if (moonOrbitGroup) {
+      moonOrbitGroup.rotation.y = moonOrbitAngle
+    }
+
+    const earthAxisFrame = earthAxisFrameRef.current
+    if (earthAxisFrame) {
+      earthAxisFrame.rotation.y = -earthOrbitAngle
+      earthAxisFrame.rotation.z = EARTH_AXIAL_TILT_RAD
+    }
+  }, [dateAnchorISO, dateJumpRequestId, isEarth])
 
   useFrame((_state, delta) => {
     const orbitGroup = orbitGroupRef.current

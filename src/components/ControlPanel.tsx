@@ -26,6 +26,12 @@ function formatTimeScale(daysPerSecond: number): string {
   return daysPerSecond.toFixed(2)
 }
 
+function getTodayLocalISO(): string {
+  const now = new Date()
+  const localTime = new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000)
+  return localTime.toISOString().slice(0, 10)
+}
+
 const closeupSeasonOrder: CloseupSeason[] = ['봄', '여름', '가을', '겨울']
 const moonPhaseTargets: MoonPhaseTarget[] = ['삭', '상현', '보름', '하현']
 
@@ -120,14 +126,17 @@ export function ControlPanel() {
     surfaceTemperatureMode,
     closeupInsights,
     moonPhaseJumpTarget,
+    anchorDateISO,
     selectedPlanetId,
     setTimeScale,
     setDistanceScale,
     setSizeExaggeration,
+    setAnchorDate,
     togglePause,
     toggleSurfaceTemperatureMode,
     jumpToSeason,
     jumpToMoonPhase,
+    jumpToDate,
     toggleOrbits,
     toggleLabels,
   } = useSolarSystemStore(
@@ -142,14 +151,17 @@ export function ControlPanel() {
       surfaceTemperatureMode: state.surfaceTemperatureMode,
       closeupInsights: state.closeupInsights,
       moonPhaseJumpTarget: state.moonPhaseJumpTarget,
+      anchorDateISO: state.anchorDateISO,
       selectedPlanetId: state.selectedPlanetId,
       setTimeScale: state.setTimeScale,
       setDistanceScale: state.setDistanceScale,
       setSizeExaggeration: state.setSizeExaggeration,
+      setAnchorDate: state.setAnchorDate,
       togglePause: state.togglePause,
       toggleSurfaceTemperatureMode: state.toggleSurfaceTemperatureMode,
       jumpToSeason: state.jumpToSeason,
       jumpToMoonPhase: state.jumpToMoonPhase,
+      jumpToDate: state.jumpToDate,
       toggleOrbits: state.toggleOrbits,
       toggleLabels: state.toggleLabels,
     })),
@@ -229,6 +241,30 @@ export function ControlPanel() {
           </label>
         </div>
 
+        <p className="seasonJumpTitle">날짜 기준 위치 맞추기</p>
+        <div className="dateJumpRow">
+          <input
+            className="dateInput"
+            type="date"
+            value={anchorDateISO}
+            onChange={(event) => setAnchorDate(event.target.value)}
+          />
+          <button
+            className="seasonJumpButton"
+            onClick={() => {
+              const today = getTodayLocalISO()
+              setAnchorDate(today)
+              jumpToDate(today)
+            }}
+          >
+            오늘
+          </button>
+          <button className="seasonJumpButton active" onClick={() => jumpToDate(anchorDateISO)}>
+            날짜 적용
+          </button>
+        </div>
+        <p className="sectionHint">입력한 날짜 기준으로 지구-태양-달 상대 위치를 즉시 동기화합니다.</p>
+
         {mode === 'realistic' && (
           <p className="modeWarning">
             실제 비율 모드에서는 행성이 너무 작고 멀어서 거의 보이지 않을 수 있습니다. 이것이 우주 스케일입니다.
@@ -254,6 +290,10 @@ export function ControlPanel() {
               <div>
                 <dt>조석 상태</dt>
                 <dd>{closeupInsights.tideName}</dd>
+              </div>
+              <div>
+                <dt>기준 날짜</dt>
+                <dd>{anchorDateISO}</dd>
               </div>
             </dl>
             <p className="seasonJumpTitle">계절 바로 이동</p>
@@ -298,6 +338,10 @@ export function ControlPanel() {
               <div>
                 <dt>연계 조석 상태</dt>
                 <dd>{closeupInsights.tideName}</dd>
+              </div>
+              <div>
+                <dt>기준 날짜</dt>
+                <dd>{anchorDateISO}</dd>
               </div>
             </dl>
             <p className="seasonJumpTitle">달 위상 바로 이동</p>

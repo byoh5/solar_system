@@ -22,6 +22,12 @@ type ModePreset = {
   sizeExaggeration: number
 }
 
+function getTodayLocalISO(): string {
+  const now = new Date()
+  const localTime = new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000)
+  return localTime.toISOString().slice(0, 10)
+}
+
 const modePresets: Record<DisplayMode, ModePreset> = {
   presentation: {
     timeScale: 25,
@@ -71,16 +77,20 @@ interface SolarSystemState {
   seasonJumpRequestId: number
   moonPhaseJumpTarget: MoonPhaseTarget
   moonPhaseJumpRequestId: number
+  anchorDateISO: string
+  dateJumpRequestId: number
   frameRequest: number
   setMode: (mode: DisplayMode) => void
   setTimeScale: (value: number) => void
   setDistanceScale: (value: number) => void
   setSizeExaggeration: (value: number) => void
   setCloseupInsights: (insights: CloseupInsights) => void
+  setAnchorDate: (isoDate: string) => void
   togglePause: () => void
   toggleSurfaceTemperatureMode: () => void
   jumpToSeason: (season: CloseupSeason) => void
   jumpToMoonPhase: (phase: MoonPhaseTarget) => void
+  jumpToDate: (isoDate: string) => void
   toggleOrbits: () => void
   toggleLabels: () => void
   selectPlanet: (planetId: PlanetId | null) => void
@@ -104,6 +114,8 @@ export const useSolarSystemStore = create<SolarSystemState>((set) => ({
   seasonJumpRequestId: 0,
   moonPhaseJumpTarget: '보름',
   moonPhaseJumpRequestId: 0,
+  anchorDateISO: getTodayLocalISO(),
+  dateJumpRequestId: 0,
   frameRequest: 0,
   setMode: (mode) => {
     const preset = modePresets[mode]
@@ -120,6 +132,7 @@ export const useSolarSystemStore = create<SolarSystemState>((set) => ({
   setDistanceScale: (value) => set({ distanceScale: value }),
   setSizeExaggeration: (value) => set({ sizeExaggeration: value }),
   setCloseupInsights: (closeupInsights) => set({ closeupInsights }),
+  setAnchorDate: (anchorDateISO) => set({ anchorDateISO }),
   togglePause: () => set((state) => ({ paused: !state.paused })),
   toggleSurfaceTemperatureMode: () =>
     set((state) => ({
@@ -137,6 +150,13 @@ export const useSolarSystemStore = create<SolarSystemState>((set) => ({
       mode: 'mooncloseup',
       moonPhaseJumpTarget,
       moonPhaseJumpRequestId: state.moonPhaseJumpRequestId + 1,
+      frameRequest: state.frameRequest + 1,
+    })),
+  jumpToDate: (anchorDateISO) =>
+    set((state) => ({
+      mode: state.mode === 'mooncloseup' ? 'mooncloseup' : 'closeup',
+      anchorDateISO,
+      dateJumpRequestId: state.dateJumpRequestId + 1,
       frameRequest: state.frameRequest + 1,
     })),
   toggleOrbits: () => set((state) => ({ showOrbits: !state.showOrbits })),
@@ -157,6 +177,8 @@ export const useSolarSystemStore = create<SolarSystemState>((set) => ({
       seasonJumpRequestId: state.seasonJumpRequestId,
       moonPhaseJumpTarget: '보름',
       moonPhaseJumpRequestId: state.moonPhaseJumpRequestId,
+      anchorDateISO: getTodayLocalISO(),
+      dateJumpRequestId: state.dateJumpRequestId,
       frameRequest: state.frameRequest + 1,
     })),
 }))

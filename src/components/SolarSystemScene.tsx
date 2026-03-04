@@ -215,6 +215,8 @@ export function SolarSystemScene() {
     seasonJumpRequestId,
     moonPhaseJumpTarget,
     moonPhaseJumpRequestId,
+    anchorDateISO,
+    dateJumpRequestId,
     selectedPlanetId,
     selectPlanet,
   } =
@@ -232,6 +234,8 @@ export function SolarSystemScene() {
         seasonJumpRequestId: state.seasonJumpRequestId,
         moonPhaseJumpTarget: state.moonPhaseJumpTarget,
         moonPhaseJumpRequestId: state.moonPhaseJumpRequestId,
+        anchorDateISO: state.anchorDateISO,
+        dateJumpRequestId: state.dateJumpRequestId,
         selectedPlanetId: state.selectedPlanetId,
         selectPlanet: state.selectPlanet,
       })),
@@ -333,6 +337,8 @@ export function SolarSystemScene() {
             seasonJumpRequestId={seasonJumpRequestId}
             moonPhaseJumpTarget={moonPhaseJumpTarget}
             moonPhaseJumpRequestId={moonPhaseJumpRequestId}
+            dateAnchorISO={anchorDateISO}
+            dateJumpRequestId={dateJumpRequestId}
             onSelect={selectPlanet}
             onMotionUpdate={planet.id === 'earth' ? handleEarthMotion : undefined}
           />

@@ -3,6 +3,11 @@ import type { CloseupInsights, CloseupSeason, MoonPhaseTarget } from '../store/s
 const TWO_PI = Math.PI * 2
 const QUARTER_TURN = Math.PI / 2
 const EIGHTH_TURN = Math.PI / 4
+const DAY_MS = 24 * 60 * 60 * 1000
+const TROPICAL_YEAR_DAYS = 365.2422
+const SYNODIC_MONTH_DAYS = 29.530588853
+const EARTH_SOLSTICE_REFERENCE_MS = Date.UTC(2024, 5, 20, 20, 0, 0)
+const NEW_MOON_REFERENCE_MS = Date.UTC(2000, 0, 6, 18, 14, 0)
 
 function normalizeAngle(angle: number): number {
   const wrapped = angle % TWO_PI
@@ -12,6 +17,11 @@ function normalizeAngle(angle: number): number {
 function angularDistance(a: number, b: number): number {
   const diff = Math.abs(normalizeAngle(a) - normalizeAngle(b))
   return Math.min(diff, TWO_PI - diff)
+}
+
+function positiveModulo(value: number, divisor: number): number {
+  const wrapped = value % divisor
+  return wrapped >= 0 ? wrapped : wrapped + divisor
 }
 
 function resolveSeason(seasonPhase: number): Pick<CloseupInsights, 'seasonName' | 'seasonDetail'> {
@@ -166,4 +176,23 @@ export function getMoonOrbitAngleForPhase(phase: MoonPhaseTarget): number {
   }
 
   return normalizeAngle(phaseCycle + Math.PI)
+}
+
+export function computeOrbitAnglesForDate(date: Date): {
+  earthOrbitAngle: number
+  moonOrbitAngle: number
+} {
+  const timestamp = date.getTime()
+  const daysSinceSolstice = (timestamp - EARTH_SOLSTICE_REFERENCE_MS) / DAY_MS
+  const earthOrbitAngle = normalizeAngle((daysSinceSolstice / TROPICAL_YEAR_DAYS) * TWO_PI)
+
+  const daysSinceNewMoon = (timestamp - NEW_MOON_REFERENCE_MS) / DAY_MS
+  const lunarAge = positiveModulo(daysSinceNewMoon, SYNODIC_MONTH_DAYS)
+  const phaseCycle = (lunarAge / SYNODIC_MONTH_DAYS) * TWO_PI
+  const moonOrbitAngle = normalizeAngle(phaseCycle + Math.PI)
+
+  return {
+    earthOrbitAngle,
+    moonOrbitAngle,
+  }
 }
