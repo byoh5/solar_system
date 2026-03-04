@@ -1,6 +1,6 @@
 import { OrbitControls, Stars } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Vector3 } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useShallow } from 'zustand/react/shallow'
@@ -66,8 +66,17 @@ type CloseupFollowerProps = {
 function CloseupFollower({ controlsRef, earthPositionRef }: CloseupFollowerProps) {
   const camera = useThree((state) => state.camera)
   const mode = useSolarSystemStore((state) => state.mode)
-  const targetPositionRef = useRef(new Vector3())
-  const cameraOffsetRef = useRef(new Vector3(10.5, 4.8, 9.5))
+  const previousEarthPositionRef = useRef(new Vector3())
+  const movementDeltaRef = useRef(new Vector3())
+  const currentOffsetRef = useRef(new Vector3())
+  const defaultOffsetRef = useRef(new Vector3(10.5, 4.8, 9.5))
+  const initializedRef = useRef(false)
+
+  useEffect(() => {
+    if (mode !== 'closeup') {
+      initializedRef.current = false
+    }
+  }, [mode])
 
   useFrame(() => {
     if (mode !== 'closeup') {
@@ -79,12 +88,29 @@ function CloseupFollower({ controlsRef, earthPositionRef }: CloseupFollowerProps
       return
     }
 
-    targetPositionRef.current
-      .copy(earthPositionRef.current)
-      .add(cameraOffsetRef.current)
+    const earthPosition = earthPositionRef.current
 
-    camera.position.lerp(targetPositionRef.current, 0.1)
-    controls.target.lerp(earthPositionRef.current, 0.14)
+    if (!initializedRef.current) {
+      currentOffsetRef.current.copy(camera.position).sub(controls.target)
+      if (currentOffsetRef.current.lengthSq() < 0.01) {
+        currentOffsetRef.current.copy(defaultOffsetRef.current)
+      }
+
+      camera.position.copy(earthPosition).add(currentOffsetRef.current)
+      controls.target.copy(earthPosition)
+      previousEarthPositionRef.current.copy(earthPosition)
+      initializedRef.current = true
+      controls.update()
+      return
+    }
+
+    movementDeltaRef.current.copy(earthPosition).sub(previousEarthPositionRef.current)
+    if (movementDeltaRef.current.lengthSq() > 1e-8) {
+      camera.position.add(movementDeltaRef.current)
+    }
+
+    controls.target.copy(earthPosition)
+    previousEarthPositionRef.current.copy(earthPosition)
     controls.update()
   })
 
@@ -181,27 +207,30 @@ export function SolarSystemScene() {
       {showOrbits &&
         visiblePlanets.map((planet) => <OrbitRing key={`${planet.id}-orbit`} radius={planet.renderOrbitRadius} />)}
 
-      {visiblePlanets.map((planet) => (
-        <Planet
-          key={planet.id}
-          planet={planet}
-          orbitRadius={planet.renderOrbitRadius}
-          radius={planet.renderRadius}
-          timeScale={timeScale}
-          selected={selectedPlanetId === planet.id}
-          showLabel={showLabels}
-          mode={mode}
-          onSelect={selectPlanet}
-          onMotionUpdate={planet.id === 'earth' ? handleEarthMotion : undefined}
-        />
-      ))}
+      <Suspense fallback={null}>
+        {visiblePlanets.map((planet) => (
+          <Planet
+            key={planet.id}
+            planet={planet}
+            orbitRadius={planet.renderOrbitRadius}
+            radius={planet.renderRadius}
+            timeScale={timeScale}
+            selected={selectedPlanetId === planet.id}
+            showLabel={showLabels}
+            mode={mode}
+            onSelect={selectPlanet}
+            onMotionUpdate={planet.id === 'earth' ? handleEarthMotion : undefined}
+          />
+        ))}
+      </Suspense>
 
       <OrbitControls
         ref={controlsRef}
         enablePan={mode !== 'closeup'}
         minDistance={mode === 'closeup' ? 3 : 12}
         maxDistance={mode === 'presentation' ? 500 : mode === 'closeup' ? 240 : 16000}
-        maxPolarAngle={Math.PI * 0.48}
+        minPolarAngle={mode === 'closeup' ? 0.02 : 0}
+        maxPolarAngle={mode === 'closeup' ? Math.PI - 0.02 : Math.PI * 0.48}
       />
     </Canvas>
   )

@@ -217,6 +217,11 @@ input[type='range'] {
   line-height: 1.45;
 }
 
+.closeupLegend {
+  color: #dff5ff;
+  font-weight: 600;
+}
+
 .infoCard {
   flex: 1;
 }

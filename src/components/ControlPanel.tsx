@@ -133,6 +133,7 @@ export function ControlPanel() {
             </dl>
             <p>{closeupInsights.seasonDetail}</p>
             <p>{closeupInsights.tideDetail}</p>
+            <p className="closeupLegend">온도색: 파랑(저온) → 청록(온난) → 주황(고온, 태양 입사각 큼)</p>
           </div>
         )}
       </section>
