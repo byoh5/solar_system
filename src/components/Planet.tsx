@@ -284,7 +284,7 @@ export function Planet({
 
       if (moonOrbitGroup && moonMesh) {
         const moonOrbitSpeed = (timeScale / MOON_ORBITAL_PERIOD_DAYS) * TWO_PI
-        moonOrbitAngleRef.current -= delta * moonOrbitSpeed
+        moonOrbitAngleRef.current += delta * moonOrbitSpeed
         moonOrbitGroup.rotation.y = moonOrbitAngleRef.current
 
         const moonRotationSpeed = (timeScale * 24 * TWO_PI) / MOON_ROTATION_PERIOD_HOURS

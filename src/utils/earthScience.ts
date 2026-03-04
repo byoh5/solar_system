@@ -118,7 +118,7 @@ function resolveTides(phaseCycle: number): Pick<CloseupInsights, 'tideName' | 't
 
 export function computeCloseupInsights(earthOrbitAngle: number, moonOrbitAngle: number): CloseupInsights {
   const seasonPhase = normalizeAngle(-earthOrbitAngle)
-  const phaseCycle = normalizeAngle(Math.PI - moonOrbitAngle)
+  const phaseCycle = normalizeAngle(moonOrbitAngle - Math.PI)
 
   return {
     ...resolveSeason(seasonPhase),
@@ -165,5 +165,5 @@ export function getMoonOrbitAngleForPhase(phase: MoonPhaseTarget): number {
       break
   }
 
-  return normalizeAngle(Math.PI - phaseCycle)
+  return normalizeAngle(phaseCycle + Math.PI)
 }

@@ -53,7 +53,7 @@ const defaultCloseupInsights: CloseupInsights = {
   tideName: '중간 조차',
   tideDetail: '달-태양 배치가 완전히 일직선은 아니라 조차가 중간 수준입니다.',
   earthOrbitAngle: 0,
-  moonOrbitAngle: Math.PI * 0.5,
+  moonOrbitAngle: Math.PI * 1.5,
 }
 
 interface SolarSystemState {
