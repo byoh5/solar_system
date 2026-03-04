@@ -1,5 +1,11 @@
 import { planetMap } from '../data/planetData'
-import { useSolarSystemStore, type CloseupSeason, type MoonPhaseTarget } from '../store/solarSystemStore'
+import {
+  REALTIME_DAYS_PER_SECOND,
+  TODAY_JUMP_DAYS_PER_SECOND,
+  useSolarSystemStore,
+  type CloseupSeason,
+  type MoonPhaseTarget,
+} from '../store/solarSystemStore'
 import { useShallow } from 'zustand/react/shallow'
 
 function formatRotationPeriod(hours: number): string {
@@ -15,21 +21,35 @@ function formatRotationPeriod(hours: number): string {
 }
 
 function formatTimeScale(daysPerSecond: number): string {
+  if (Math.abs(daysPerSecond - REALTIME_DAYS_PER_SECOND) < 1e-9) {
+    return '1초 = 1초'
+  }
+
   if (daysPerSecond >= 10) {
-    return daysPerSecond.toFixed(0)
+    return `1초 = ${daysPerSecond.toFixed(0)}일`
   }
 
   if (daysPerSecond >= 1) {
-    return daysPerSecond.toFixed(1)
+    return `1초 = ${daysPerSecond.toFixed(1)}일`
   }
 
-  return daysPerSecond.toFixed(2)
+  if (daysPerSecond >= 0.1) {
+    return `1초 = ${daysPerSecond.toFixed(2)}일`
+  }
+
+  return `1초 = ${daysPerSecond.toFixed(5)}일`
 }
 
-function getTodayLocalISO(): string {
-  const now = new Date()
-  const localTime = new Date(now.getTime() - now.getTimezoneOffset() * 60 * 1000)
-  return localTime.toISOString().slice(0, 10)
+function formatSimulationTime(unixMs: number): string {
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(new Date(unixMs))
 }
 
 const closeupSeasonOrder: CloseupSeason[] = ['봄', '여름', '가을', '겨울']
@@ -127,16 +147,19 @@ export function ControlPanel() {
     closeupInsights,
     moonPhaseJumpTarget,
     anchorDateISO,
+    simulationTimeMs,
     selectedPlanetId,
     setTimeScale,
     setDistanceScale,
     setSizeExaggeration,
     setAnchorDate,
+    setSimulationTime,
     togglePause,
     toggleSurfaceTemperatureMode,
     jumpToSeason,
     jumpToMoonPhase,
     jumpToDate,
+    jumpToToday,
     toggleOrbits,
     toggleLabels,
   } = useSolarSystemStore(
@@ -152,16 +175,19 @@ export function ControlPanel() {
       closeupInsights: state.closeupInsights,
       moonPhaseJumpTarget: state.moonPhaseJumpTarget,
       anchorDateISO: state.anchorDateISO,
+      simulationTimeMs: state.simulationTimeMs,
       selectedPlanetId: state.selectedPlanetId,
       setTimeScale: state.setTimeScale,
       setDistanceScale: state.setDistanceScale,
       setSizeExaggeration: state.setSizeExaggeration,
       setAnchorDate: state.setAnchorDate,
+      setSimulationTime: state.setSimulationTime,
       togglePause: state.togglePause,
       toggleSurfaceTemperatureMode: state.toggleSurfaceTemperatureMode,
       jumpToSeason: state.jumpToSeason,
       jumpToMoonPhase: state.jumpToMoonPhase,
       jumpToDate: state.jumpToDate,
+      jumpToToday: state.jumpToToday,
       toggleOrbits: state.toggleOrbits,
       toggleLabels: state.toggleLabels,
     })),
@@ -170,6 +196,9 @@ export function ControlPanel() {
   const selectedPlanet = selectedPlanetId ? planetMap[selectedPlanetId] : null
   const moonLightPercent = Math.round(closeupInsights.moonLightRatio * 100)
   const currentPhaseShortName = resolveMoonPhaseShortName(closeupInsights.moonPhaseName)
+  const speedMultiplier = timeScale / REALTIME_DAYS_PER_SECOND
+  const speedLabel =
+    speedMultiplier >= 1 ? `실시간 대비 x${speedMultiplier.toFixed(0)}` : `실시간 대비 x${speedMultiplier.toFixed(3)}`
 
   return (
     <div className="panel">
@@ -178,21 +207,38 @@ export function ControlPanel() {
         <p className="sectionHint">모드와 슬라이더를 조합해 공전/자전, 계절, 달 위상, 조석 변화를 확인하세요.</p>
 
         <label className="rangeLabel" htmlFor="timeScale">
-          시간 가속: <strong>1초 = {formatTimeScale(timeScale)}일</strong>
+          시간 가속: <strong>{formatTimeScale(timeScale)}</strong>
         </label>
         <input
           id="timeScale"
           type="range"
-          min={0.05}
+          min={REALTIME_DAYS_PER_SECOND}
           max={120}
-          step={0.05}
+          step={0.00001}
           value={timeScale}
           onChange={(event) => setTimeScale(Number(event.target.value))}
         />
+        <p className="sectionHint">현재 속도: {speedLabel}</p>
+        <p className="sectionHint">시뮬레이션 시각: {formatSimulationTime(simulationTimeMs)}</p>
 
         <div className="quickActionRow">
           <button className="panelActionButton" onClick={togglePause}>
             {paused ? '재생' : '일시정지'}
+          </button>
+          <button
+            className="panelActionButton"
+            onClick={() => {
+              setTimeScale(REALTIME_DAYS_PER_SECOND)
+              setSimulationTime(Date.now())
+              if (paused) {
+                togglePause()
+              }
+            }}
+          >
+            1초 = 1초
+          </button>
+          <button className="panelActionButton" onClick={() => setTimeScale(TODAY_JUMP_DAYS_PER_SECOND)}>
+            1초 = 0.05일
           </button>
           {mode === 'closeup' && (
             <label className="panelInlineToggle">
@@ -249,14 +295,7 @@ export function ControlPanel() {
             value={anchorDateISO}
             onChange={(event) => setAnchorDate(event.target.value)}
           />
-          <button
-            className="seasonJumpButton"
-            onClick={() => {
-              const today = getTodayLocalISO()
-              setAnchorDate(today)
-              jumpToDate(today)
-            }}
-          >
+          <button className="seasonJumpButton" onClick={jumpToToday}>
             오늘
           </button>
           <button className="seasonJumpButton active" onClick={() => jumpToDate(anchorDateISO)}>

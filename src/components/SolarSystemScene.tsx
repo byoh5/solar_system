@@ -11,6 +11,8 @@ import { computeOrbitRadius, computePlanetRadius, computeSunRadius } from '../ut
 import { OrbitRing } from './OrbitRing'
 import { Planet, type PlanetMotionPayload } from './Planet'
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
 type SceneFramerProps = {
   controlsRef: React.RefObject<OrbitControlsImpl | null>
   earthPositionRef: React.RefObject<Vector3>
@@ -134,6 +136,37 @@ function SceneFramer({ controlsRef, earthPositionRef, moonPositionRef, fallbackE
     seasonJumpRequestId,
     seasonJumpTarget,
   ])
+
+  return null
+}
+
+function SimulationClockDriver() {
+  const { paused, timeScale, advanceSimulationTime } = useSolarSystemStore(
+    useShallow((state) => ({
+      paused: state.paused,
+      timeScale: state.timeScale,
+      advanceSimulationTime: state.advanceSimulationTime,
+    })),
+  )
+  const realAccumulatorRef = useRef(0)
+  const simAccumulatorRef = useRef(0)
+
+  useFrame((_state, delta) => {
+    if (paused) {
+      realAccumulatorRef.current = 0
+      simAccumulatorRef.current = 0
+      return
+    }
+
+    realAccumulatorRef.current += delta
+    simAccumulatorRef.current += delta * timeScale * DAY_MS
+
+    if (realAccumulatorRef.current >= 0.2) {
+      advanceSimulationTime(simAccumulatorRef.current)
+      realAccumulatorRef.current = 0
+      simAccumulatorRef.current = 0
+    }
+  })
 
   return null
 }
@@ -299,6 +332,7 @@ export function SolarSystemScene() {
       onPointerMissed={() => selectPlanet(null)}
     >
       <color attach="background" args={['#030511']} />
+      <SimulationClockDriver />
       <SceneFramer
         controlsRef={controlsRef}
         earthPositionRef={earthPositionRef}
