@@ -22,6 +22,7 @@ export function ControlPanel() {
     sizeExaggeration,
     showOrbits,
     showLabels,
+    closeupInsights,
     selectedPlanetId,
     setTimeScale,
     setDistanceScale,
@@ -36,6 +37,7 @@ export function ControlPanel() {
       sizeExaggeration: state.sizeExaggeration,
       showOrbits: state.showOrbits,
       showLabels: state.showLabels,
+      closeupInsights: state.closeupInsights,
       selectedPlanetId: state.selectedPlanetId,
       setTimeScale: state.setTimeScale,
       setDistanceScale: state.setDistanceScale,
@@ -46,12 +48,13 @@ export function ControlPanel() {
   )
 
   const selectedPlanet = selectedPlanetId ? planetMap[selectedPlanetId] : null
+  const moonLightPercent = Math.round(closeupInsights.moonLightRatio * 100)
 
   return (
     <div className="panel">
       <section className="panelSection">
         <h2>학습 컨트롤</h2>
-        <p className="sectionHint">모드와 슬라이더를 조합해 공전/자전과 스케일 차이를 확인하세요.</p>
+        <p className="sectionHint">모드와 슬라이더를 조합해 공전/자전, 계절, 달 위상, 조석 변화를 확인하세요.</p>
 
         <label className="rangeLabel" htmlFor="timeScale">
           시간 가속: <strong>1초 = {timeScale.toFixed(0)}일</strong>
@@ -105,6 +108,32 @@ export function ControlPanel() {
           <p className="modeWarning">
             실제 비율 모드에서는 행성이 너무 작고 멀어서 거의 보이지 않을 수 있습니다. 이것이 우주 스케일입니다.
           </p>
+        )}
+
+        {mode === 'closeup' && (
+          <div className="closeupCard">
+            <h3>지구 클로즈업 학습 카드</h3>
+            <dl>
+              <div>
+                <dt>계절(북반구)</dt>
+                <dd>{closeupInsights.seasonName}</dd>
+              </div>
+              <div>
+                <dt>달 위상</dt>
+                <dd>{closeupInsights.moonPhaseName}</dd>
+              </div>
+              <div>
+                <dt>달 조명 비율</dt>
+                <dd>{moonLightPercent}%</dd>
+              </div>
+              <div>
+                <dt>조석 상태</dt>
+                <dd>{closeupInsights.tideName}</dd>
+              </div>
+            </dl>
+            <p>{closeupInsights.seasonDetail}</p>
+            <p>{closeupInsights.tideDetail}</p>
+          </div>
         )}
       </section>
 

@@ -1,19 +1,23 @@
 import { OrbitControls, Stars } from '@react-three/drei'
-import { Canvas, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useRef } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { Vector3 } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useShallow } from 'zustand/react/shallow'
 import { planetData } from '../data/planetData'
 import { useSolarSystemStore } from '../store/solarSystemStore'
+import { computeCloseupInsights } from '../utils/earthScience'
 import { computeOrbitRadius, computePlanetRadius, computeSunRadius } from '../utils/scales'
 import { OrbitRing } from './OrbitRing'
-import { Planet } from './Planet'
+import { Planet, type PlanetMotionPayload } from './Planet'
 
 type SceneFramerProps = {
   controlsRef: React.RefObject<OrbitControlsImpl | null>
+  earthPositionRef: React.RefObject<Vector3>
+  fallbackEarthOrbitRadius: number
 }
 
-function SceneFramer({ controlsRef }: SceneFramerProps) {
+function SceneFramer({ controlsRef, earthPositionRef, fallbackEarthOrbitRadius }: SceneFramerProps) {
   const camera = useThree((state) => state.camera)
   const { frameRequest, mode } = useSolarSystemStore(
     useShallow((state) => ({
@@ -29,21 +33,68 @@ function SceneFramer({ controlsRef }: SceneFramerProps) {
       return
     }
 
-    if (mode === 'presentation') {
+    if (mode === 'closeup') {
+      if (earthPositionRef.current.lengthSq() < 0.01) {
+        earthPositionRef.current.set(fallbackEarthOrbitRadius, 0, 0)
+      }
+
+      camera.position.set(
+        earthPositionRef.current.x + 10.5,
+        earthPositionRef.current.y + 4.8,
+        earthPositionRef.current.z + 9.5,
+      )
+      controls.target.copy(earthPositionRef.current)
+    } else if (mode === 'presentation') {
       camera.position.set(0, 72, 172)
+      controls.target.set(0, 0, 0)
     } else {
       camera.position.set(0, 180, 920)
+      controls.target.set(0, 0, 0)
     }
 
-    controls.target.set(0, 0, 0)
     controls.update()
-  }, [camera, controlsRef, frameRequest, mode])
+  }, [camera, controlsRef, earthPositionRef, fallbackEarthOrbitRadius, frameRequest, mode])
+
+  return null
+}
+
+type CloseupFollowerProps = {
+  controlsRef: React.RefObject<OrbitControlsImpl | null>
+  earthPositionRef: React.RefObject<Vector3>
+}
+
+function CloseupFollower({ controlsRef, earthPositionRef }: CloseupFollowerProps) {
+  const camera = useThree((state) => state.camera)
+  const mode = useSolarSystemStore((state) => state.mode)
+  const targetPositionRef = useRef(new Vector3())
+  const cameraOffsetRef = useRef(new Vector3(10.5, 4.8, 9.5))
+
+  useFrame(() => {
+    if (mode !== 'closeup') {
+      return
+    }
+
+    const controls = controlsRef.current
+    if (!controls) {
+      return
+    }
+
+    targetPositionRef.current
+      .copy(earthPositionRef.current)
+      .add(cameraOffsetRef.current)
+
+    camera.position.lerp(targetPositionRef.current, 0.1)
+    controls.target.lerp(earthPositionRef.current, 0.14)
+    controls.update()
+  })
 
   return null
 }
 
 export function SolarSystemScene() {
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
+  const earthPositionRef = useRef(new Vector3())
+  const insightsUpdatedAtRef = useRef(0)
 
   const { mode, timeScale, distanceScale, sizeExaggeration, showOrbits, showLabels, selectedPlanetId, selectPlanet } =
     useSolarSystemStore(
@@ -59,6 +110,8 @@ export function SolarSystemScene() {
       })),
     )
 
+  const setCloseupInsights = useSolarSystemStore((state) => state.setCloseupInsights)
+
   const scaledPlanets = useMemo(
     () =>
       planetData.map((planet) => ({
@@ -67,6 +120,36 @@ export function SolarSystemScene() {
         renderRadius: computePlanetRadius(planet.radiusKm, mode, sizeExaggeration),
       })),
     [distanceScale, mode, sizeExaggeration],
+  )
+
+  const visiblePlanets = useMemo(
+    () => (mode === 'closeup' ? scaledPlanets.filter((planet) => planet.id === 'earth') : scaledPlanets),
+    [mode, scaledPlanets],
+  )
+
+  const earthOrbitRadius = useMemo(
+    () => scaledPlanets.find((planet) => planet.id === 'earth')?.renderOrbitRadius ?? 34,
+    [scaledPlanets],
+  )
+
+  const handleEarthMotion = useCallback(
+    (payload: PlanetMotionPayload) => {
+      const [x, y, z] = payload.worldPosition
+      earthPositionRef.current.set(x, y, z)
+
+      if (mode !== 'closeup' || typeof payload.moonOrbitAngle !== 'number') {
+        return
+      }
+
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+      if (now - insightsUpdatedAtRef.current < 120) {
+        return
+      }
+
+      insightsUpdatedAtRef.current = now
+      setCloseupInsights(computeCloseupInsights(payload.orbitAngle, payload.moonOrbitAngle))
+    },
+    [mode, setCloseupInsights],
   )
 
   const sunRadius = computeSunRadius(mode, sizeExaggeration)
@@ -78,12 +161,17 @@ export function SolarSystemScene() {
       onPointerMissed={() => selectPlanet(null)}
     >
       <color attach="background" args={['#030511']} />
-      <SceneFramer controlsRef={controlsRef} />
+      <SceneFramer
+        controlsRef={controlsRef}
+        earthPositionRef={earthPositionRef}
+        fallbackEarthOrbitRadius={earthOrbitRadius}
+      />
+      <CloseupFollower controlsRef={controlsRef} earthPositionRef={earthPositionRef} />
 
       <ambientLight intensity={0.25} />
       <pointLight position={[0, 0, 0]} intensity={2.2} distance={0} decay={2} />
 
-      <Stars radius={mode === 'presentation' ? 1200 : 12000} depth={70} count={4000} factor={5} fade />
+      <Stars radius={mode === 'realistic' ? 12000 : 1200} depth={70} count={4000} factor={5} fade />
 
       <mesh>
         <sphereGeometry args={[sunRadius, 48, 48]} />
@@ -91,9 +179,9 @@ export function SolarSystemScene() {
       </mesh>
 
       {showOrbits &&
-        scaledPlanets.map((planet) => <OrbitRing key={`${planet.id}-orbit`} radius={planet.renderOrbitRadius} />)}
+        visiblePlanets.map((planet) => <OrbitRing key={`${planet.id}-orbit`} radius={planet.renderOrbitRadius} />)}
 
-      {scaledPlanets.map((planet) => (
+      {visiblePlanets.map((planet) => (
         <Planet
           key={planet.id}
           planet={planet}
@@ -104,14 +192,15 @@ export function SolarSystemScene() {
           showLabel={showLabels}
           mode={mode}
           onSelect={selectPlanet}
+          onMotionUpdate={planet.id === 'earth' ? handleEarthMotion : undefined}
         />
       ))}
 
       <OrbitControls
         ref={controlsRef}
-        enablePan={false}
-        minDistance={12}
-        maxDistance={mode === 'presentation' ? 500 : 16000}
+        enablePan={mode !== 'closeup'}
+        minDistance={mode === 'closeup' ? 3 : 12}
+        maxDistance={mode === 'presentation' ? 500 : mode === 'closeup' ? 240 : 16000}
         maxPolarAngle={Math.PI * 0.48}
       />
     </Canvas>

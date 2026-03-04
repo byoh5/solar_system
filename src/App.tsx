@@ -35,6 +35,12 @@ function App() {
           >
             실제 비율 모드
           </button>
+          <button
+            className={`modeButton ${mode === 'closeup' ? 'active' : ''}`}
+            onClick={() => setMode('closeup')}
+          >
+            지구 클로즈업 모드
+          </button>
           <button className="utilityButton" onClick={requestFrameSystem}>
             카메라 프레이밍
           </button>
@@ -43,7 +49,7 @@ function App() {
           </button>
           <span
             className="helpBadge"
-            title="보기 좋은 모드에서 개념을 먼저 이해한 뒤 실제 비율 모드로 전환하면 스케일 차이를 쉽게 설명할 수 있습니다."
+            title="보기 좋은 모드로 전체 구조를 익히고, 지구 클로즈업 모드에서 계절·달 위상·밀물/썰물을 확인한 뒤 실제 비율 모드로 스케일 차이를 비교해보세요."
           >
             도움말
           </span>

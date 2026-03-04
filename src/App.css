@@ -171,6 +171,52 @@ input[type='range'] {
   color: #ffdca9;
 }
 
+.closeupCard {
+  margin-top: 0.85rem;
+  padding: 0.72rem;
+  border-radius: 11px;
+  border: 1px solid rgba(148, 201, 255, 0.38);
+  background: linear-gradient(160deg, rgba(19, 40, 73, 0.46), rgba(11, 24, 43, 0.72));
+}
+
+.closeupCard h3 {
+  margin: 0 0 0.55rem;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+}
+
+.closeupCard dl {
+  margin: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.closeupCard dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.28rem 0;
+  border-bottom: 1px dashed rgba(163, 196, 250, 0.22);
+}
+
+.closeupCard dt {
+  color: #b7c9eb;
+}
+
+.closeupCard dd {
+  margin: 0;
+  color: #ebf3ff;
+  font-weight: 600;
+  text-align: right;
+}
+
+.closeupCard p {
+  margin: 0.55rem 0 0;
+  color: #d6e5ff;
+  font-size: 0.83rem;
+  line-height: 1.45;
+}
+
 .infoCard {
   flex: 1;
 }
