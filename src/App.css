@@ -120,7 +120,7 @@
 
 .rightRail {
   display: grid;
-  grid-template-rows: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 1rem;
   min-height: 0;
 }
@@ -144,6 +144,7 @@
 .videoDock.compact {
   border-top: 0;
   padding: 0.75rem;
+  height: auto;
   background: linear-gradient(145deg, rgba(8, 16, 31, 0.94), rgba(9, 19, 34, 0.86));
 }
 
@@ -194,11 +195,10 @@
 }
 
 .videoDock.compact .videoDockBody {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto auto;
   gap: 0.62rem;
-  flex: 1;
-  min-height: 0;
+  min-height: auto;
 }
 
 .videoPlayerCard,
@@ -329,10 +329,16 @@
 }
 
 .videoDock.compact .videoListCard {
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
+  min-height: auto;
   padding: 0.5rem;
   gap: 0.42rem;
+}
+
+.videoListHint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #c7ddff;
 }
 
 .videoSearchLabel {
@@ -366,11 +372,12 @@
 
 .videoDock.compact .videoList {
   max-height: none;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
-  overflow-y: auto;
+  min-height: auto;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 210px;
+  overflow-x: auto;
+  overflow-y: hidden;
   gap: 0.34rem;
 }
 
@@ -418,7 +425,7 @@
 }
 
 .videoDock.compact .videoListItem {
-  grid-template-columns: 84px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
   gap: 0.42rem;
   padding: 0.26rem;
 }
@@ -818,6 +825,10 @@ input[type='range'] {
 
   .videoDockBody {
     grid-template-columns: 1fr;
+  }
+
+  .videoDock.compact .videoList {
+    grid-auto-columns: 190px;
   }
 
   .videoList {

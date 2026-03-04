@@ -65,17 +65,23 @@ export function LessonVideoLibrary({ compact = false }: LessonVideoLibraryProps)
         </article>
 
         <aside className="videoListCard">
-          <label className="videoSearchLabel" htmlFor="video-search">
-            영상 검색
-          </label>
-          <input
-            id="video-search"
-            className="videoSearchInput"
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="제목, 설명, 난이도로 검색"
-          />
+          {compact ? (
+            <p className="videoListHint">영상 목록</p>
+          ) : (
+            <>
+              <label className="videoSearchLabel" htmlFor="video-search">
+                영상 검색
+              </label>
+              <input
+                id="video-search"
+                className="videoSearchInput"
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="제목, 설명, 난이도로 검색"
+              />
+            </>
+          )}
 
           {filteredVideos.length === 0 ? (
             <p className="videoEmptyMessage">검색 결과가 없습니다.</p>
