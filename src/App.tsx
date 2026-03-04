@@ -1,5 +1,6 @@
 import './App.css'
 import { ControlPanel } from './components/ControlPanel'
+import { LessonVideoLibrary } from './components/LessonVideoLibrary'
 import { SolarSystemScene } from './components/SolarSystemScene'
 import { useSolarSystemStore } from './store/solarSystemStore'
 import { useShallow } from 'zustand/react/shallow'
@@ -64,7 +65,10 @@ function App() {
 
       <main className="contentLayout">
         <section className="sceneArea">
-          <SolarSystemScene />
+          <div className="sceneViewport">
+            <SolarSystemScene />
+          </div>
+          <LessonVideoLibrary />
         </section>
         <aside className="sidePanel">
           <ControlPanel />

@@ -22,6 +22,31 @@ npm run build
 npm run preview
 ```
 
+## 수업 영상 추가/관리
+
+3D 모형 하단의 영상 영역은 데이터 파일 기반으로 동작합니다.
+
+- 영상 데이터 파일: `src/data/learningVideoData.ts`
+- `learningVideoSources` 배열에 항목을 추가하면 목록/검색/플레이어에 자동 반영
+- 한 번에 iframe 하나만 렌더링해서 영상이 많아져도 화면 성능이 급격히 떨어지지 않도록 구성
+
+```ts
+{
+  id: 'solar-system-example-002',
+  title: '새 태양계 영상',
+  description: '영상 요약 설명',
+  youtubeUrl: 'https://youtu.be/VIDEO_ID',
+  level: '중급',
+}
+```
+
+지원 링크 형식:
+
+- `https://youtu.be/...`
+- `https://www.youtube.com/watch?v=...`
+- `https://www.youtube.com/shorts/...`
+- `https://www.youtube.com/embed/...`
+
 ## GitHub Pages 배포
 
 이 저장소에는 GitHub Actions 기반 Pages 배포 워크플로우가 포함되어 있습니다.
