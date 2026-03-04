@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { PlanetId } from '../data/planetData'
 
-export type DisplayMode = 'presentation' | 'realistic' | 'closeup'
+export type DisplayMode = 'presentation' | 'realistic' | 'closeup' | 'mooncloseup'
 export type CloseupSeason = '봄' | '여름' | '가을' | '겨울'
 
 export interface CloseupInsights {
@@ -34,6 +34,11 @@ const modePresets: Record<DisplayMode, ModePreset> = {
     timeScale: 0.25,
     distanceScale: 1,
     sizeExaggeration: 1.8,
+  },
+  mooncloseup: {
+    timeScale: 0.2,
+    distanceScale: 1,
+    sizeExaggeration: 2.1,
   },
 }
 

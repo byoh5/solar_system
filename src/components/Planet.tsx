@@ -30,6 +30,7 @@ type PlanetProps = {
   timeScale: number
   selected: boolean
   showLabel: boolean
+  showOrbits: boolean
   mode: DisplayMode
   surfaceTemperatureMode: boolean
   seasonJumpTarget: CloseupSeason
@@ -88,6 +89,28 @@ const EARTH_HEAT_FRAGMENT_SHADER = `
     gl_FragColor = vec4(tone, alpha);
   }
 `
+const MOON_PHASE_VERTEX_SHADER = `
+  varying vec3 vWorldNormal;
+
+  void main() {
+    vWorldNormal = normalize(mat3(modelMatrix) * normal);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`
+const MOON_PHASE_FRAGMENT_SHADER = `
+  uniform vec3 uSunDirection;
+  uniform float uShadowStrength;
+  varying vec3 vWorldNormal;
+
+  void main() {
+    float lit = dot(normalize(vWorldNormal), normalize(uSunDirection));
+    float dayMask = smoothstep(-0.05, 0.18, lit);
+    float darkness = (1.0 - dayMask) * uShadowStrength;
+    vec3 shadowColor = vec3(0.01, 0.02, 0.05);
+
+    gl_FragColor = vec4(shadowColor, darkness);
+  }
+`
 
 export function Planet({
   planet,
@@ -96,6 +119,7 @@ export function Planet({
   timeScale,
   selected,
   showLabel,
+  showOrbits,
   mode,
   surfaceTemperatureMode,
   seasonJumpTarget,
@@ -112,9 +136,13 @@ export function Planet({
       `${prefix}earth_normal_2048.jpg`,
       `${prefix}earth_specular_2048.jpg`,
       `${prefix}earth_clouds_1024.png`,
+      `${prefix}moon_daymap_1024.jpg`,
     ]
   }, [])
-  const [earthDayMap, earthNormalMap, earthSpecularMap, earthCloudMap] = useLoader(TextureLoader, earthTexturePaths)
+  const [earthDayMap, earthNormalMap, earthSpecularMap, earthCloudMap, moonDayMap] = useLoader(
+    TextureLoader,
+    earthTexturePaths,
+  )
 
   const orbitGroupRef = useRef<Group>(null)
   const planetAnchorRef = useRef<Group>(null)
@@ -127,10 +155,12 @@ export function Planet({
   const moonOrbitGroupRef = useRef<Group>(null)
   const moonAnchorRef = useRef<Group>(null)
   const moonMeshRef = useRef<Mesh>(null)
+  const moonPhaseOverlayMaterialRef = useRef<ShaderMaterial>(null)
   const moonOrbitAngleRef = useRef((planet.orbitRadiusAU * 1.91 + radius) % TWO_PI)
   const worldPositionRef = useRef(new Vector3())
   const moonWorldPositionRef = useRef(new Vector3())
   const sunDirectionRef = useRef(new Vector3(1, 0, 0))
+  const moonSunDirectionRef = useRef(new Vector3(1, 0, 0))
   const earthNorthAxisRef = useRef(new Vector3(0, 1, 0))
   const earthWorldQuaternionRef = useRef(new Quaternion())
   const heatOverlayUniforms = useMemo(
@@ -140,6 +170,13 @@ export function Planet({
       uSeasonStrength: { value: 1 },
       uModeIntensity: { value: 1 },
       uSelectionBoost: { value: 0 },
+    }),
+    [],
+  )
+  const moonPhaseUniforms = useMemo(
+    () => ({
+      uSunDirection: { value: new Vector3(1, 0, 0) },
+      uShadowStrength: { value: 0.82 },
     }),
     [],
   )
@@ -245,6 +282,23 @@ export function Planet({
       if (cloudLayer) {
         cloudLayer.rotation.y += delta * rotationSpeed * 1.05
       }
+
+      const moonAnchor = moonAnchorRef.current
+      if (moonAnchor) {
+        moonAnchor.getWorldPosition(moonWorldPositionRef.current)
+        const moonSunDirection = moonSunDirectionRef.current.copy(moonWorldPositionRef.current).multiplyScalar(-1)
+        if (moonSunDirection.lengthSq() < 1e-6) {
+          moonSunDirection.set(1, 0, 0)
+        } else {
+          moonSunDirection.normalize()
+        }
+
+        const moonPhaseOverlayMaterial = moonPhaseOverlayMaterialRef.current
+        if (moonPhaseOverlayMaterial) {
+          ;(moonPhaseOverlayMaterial.uniforms.uSunDirection.value as Vector3).copy(moonSunDirection)
+          moonPhaseOverlayMaterial.uniforms.uShadowStrength.value = mode === 'mooncloseup' ? 0.92 : 0.82
+        }
+      }
     }
 
     if (onMotionUpdate) {
@@ -276,19 +330,27 @@ export function Planet({
   }
 
   const labelSize =
-    mode === 'realistic' ? 0.9 : mode === 'closeup' ? Math.max(radius * 0.52, 0.8) : Math.max(radius * 0.35, 0.5)
+    mode === 'realistic'
+      ? 0.9
+      : mode === 'closeup' || mode === 'mooncloseup'
+        ? Math.max(radius * 0.52, 0.8)
+        : Math.max(radius * 0.35, 0.5)
 
   const moonOrbitRadius =
     mode === 'realistic'
       ? Math.max(radius * 60, 0.6)
-      : mode === 'closeup'
+      : mode === 'mooncloseup'
+        ? Math.max(radius * 6.8, 5.4)
+        : mode === 'closeup'
         ? Math.max(radius * 4.8, 3.6)
         : Math.max(radius * 3.2, 2.2)
 
   const moonRadius =
     mode === 'realistic'
       ? Math.max(radius * 0.27, 0.02)
-      : mode === 'closeup'
+      : mode === 'mooncloseup'
+        ? Math.max(radius * 0.38, 0.5)
+        : mode === 'closeup'
         ? Math.max(radius * 0.3, 0.35)
         : Math.max(radius * 0.27, 0.2)
 
@@ -395,14 +457,43 @@ export function Planet({
         )}
 
         {isEarth && (
-          <group ref={moonOrbitGroupRef}>
-            <group ref={moonAnchorRef} position={[moonOrbitRadius, 0, 0]}>
-              <mesh ref={moonMeshRef} onClick={handleClick}>
-                <sphereGeometry args={[moonRadius, 20, 20]} />
-                <meshStandardMaterial color="#d7dde8" roughness={0.9} metalness={0.05} />
+          <>
+            {showOrbits && (
+              <mesh rotation={[Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[moonOrbitRadius * 0.992, moonOrbitRadius * 1.008, 120]} />
+                <meshBasicMaterial color="#96baff" transparent opacity={mode === 'mooncloseup' ? 0.72 : 0.52} side={DoubleSide} />
               </mesh>
+            )}
+
+            <group ref={moonOrbitGroupRef}>
+              <group ref={moonAnchorRef} position={[moonOrbitRadius, 0, 0]}>
+                <mesh ref={moonMeshRef} onClick={handleClick}>
+                  <sphereGeometry args={[moonRadius, mode === 'mooncloseup' ? 56 : 30, mode === 'mooncloseup' ? 56 : 30]} />
+                  <meshPhongMaterial
+                    map={moonDayMap}
+                    bumpMap={moonDayMap}
+                    bumpScale={mode === 'mooncloseup' ? 0.085 : 0.05}
+                    shininess={2}
+                    specular="#2f3442"
+                    emissive="#05070f"
+                    emissiveIntensity={0.05}
+                  />
+                </mesh>
+
+                <mesh scale={[1.008, 1.008, 1.008]}>
+                  <sphereGeometry args={[moonRadius, mode === 'mooncloseup' ? 56 : 30, mode === 'mooncloseup' ? 56 : 30]} />
+                  <shaderMaterial
+                    ref={moonPhaseOverlayMaterialRef}
+                    uniforms={moonPhaseUniforms}
+                    vertexShader={MOON_PHASE_VERTEX_SHADER}
+                    fragmentShader={MOON_PHASE_FRAGMENT_SHADER}
+                    transparent
+                    depthWrite={false}
+                  />
+                </mesh>
+              </group>
             </group>
-          </group>
+          </>
         )}
 
         {showLabel && (

@@ -14,11 +14,13 @@ import { Planet, type PlanetMotionPayload } from './Planet'
 type SceneFramerProps = {
   controlsRef: React.RefObject<OrbitControlsImpl | null>
   earthPositionRef: React.RefObject<Vector3>
+  moonPositionRef: React.RefObject<Vector3>
   fallbackEarthOrbitRadius: number
 }
 
-function SceneFramer({ controlsRef, earthPositionRef, fallbackEarthOrbitRadius }: SceneFramerProps) {
+function SceneFramer({ controlsRef, earthPositionRef, moonPositionRef, fallbackEarthOrbitRadius }: SceneFramerProps) {
   const camera = useThree((state) => state.camera)
+  const earthToMoonDirectionRef = useRef(new Vector3())
   const { frameRequest, mode } = useSolarSystemStore(
     useShallow((state) => ({
       frameRequest: state.frameRequest,
@@ -44,6 +46,27 @@ function SceneFramer({ controlsRef, earthPositionRef, fallbackEarthOrbitRadius }
         earthPositionRef.current.z + 9.5,
       )
       controls.target.copy(earthPositionRef.current)
+    } else if (mode === 'mooncloseup') {
+      if (earthPositionRef.current.lengthSq() < 0.01) {
+        earthPositionRef.current.set(fallbackEarthOrbitRadius, 0, 0)
+      }
+
+      if (moonPositionRef.current.lengthSq() < 0.01) {
+        moonPositionRef.current.copy(earthPositionRef.current).add(new Vector3(6.8, 0, 0))
+      }
+
+      earthToMoonDirectionRef.current.copy(moonPositionRef.current).sub(earthPositionRef.current)
+      if (earthToMoonDirectionRef.current.lengthSq() < 1e-5) {
+        earthToMoonDirectionRef.current.set(1, 0, 0)
+      } else {
+        earthToMoonDirectionRef.current.normalize()
+      }
+
+      camera.position
+        .copy(earthPositionRef.current)
+        .addScaledVector(earthToMoonDirectionRef.current, 2.8)
+        .add(new Vector3(0, 0.85, 0.35))
+      controls.target.copy(moonPositionRef.current)
     } else if (mode === 'presentation') {
       camera.position.set(0, 72, 172)
       controls.target.set(0, 0, 0)
@@ -53,7 +76,7 @@ function SceneFramer({ controlsRef, earthPositionRef, fallbackEarthOrbitRadius }
     }
 
     controls.update()
-  }, [camera, controlsRef, earthPositionRef, fallbackEarthOrbitRadius, frameRequest, mode])
+  }, [camera, controlsRef, earthPositionRef, fallbackEarthOrbitRadius, frameRequest, mode, moonPositionRef])
 
   return null
 }
@@ -61,9 +84,10 @@ function SceneFramer({ controlsRef, earthPositionRef, fallbackEarthOrbitRadius }
 type CloseupFollowerProps = {
   controlsRef: React.RefObject<OrbitControlsImpl | null>
   earthPositionRef: React.RefObject<Vector3>
+  moonPositionRef: React.RefObject<Vector3>
 }
 
-function CloseupFollower({ controlsRef, earthPositionRef }: CloseupFollowerProps) {
+function CloseupFollower({ controlsRef, earthPositionRef, moonPositionRef }: CloseupFollowerProps) {
   const camera = useThree((state) => state.camera)
   const mode = useSolarSystemStore((state) => state.mode)
   const previousEarthPositionRef = useRef(new Vector3())
@@ -73,13 +97,11 @@ function CloseupFollower({ controlsRef, earthPositionRef }: CloseupFollowerProps
   const initializedRef = useRef(false)
 
   useEffect(() => {
-    if (mode !== 'closeup') {
-      initializedRef.current = false
-    }
+    initializedRef.current = false
   }, [mode])
 
   useFrame(() => {
-    if (mode !== 'closeup') {
+    if (mode !== 'closeup' && mode !== 'mooncloseup') {
       return
     }
 
@@ -88,7 +110,7 @@ function CloseupFollower({ controlsRef, earthPositionRef }: CloseupFollowerProps
       return
     }
 
-    const earthPosition = earthPositionRef.current
+    const focusPosition = mode === 'mooncloseup' ? moonPositionRef.current : earthPositionRef.current
 
     if (!initializedRef.current) {
       currentOffsetRef.current.copy(camera.position).sub(controls.target)
@@ -96,21 +118,21 @@ function CloseupFollower({ controlsRef, earthPositionRef }: CloseupFollowerProps
         currentOffsetRef.current.copy(defaultOffsetRef.current)
       }
 
-      camera.position.copy(earthPosition).add(currentOffsetRef.current)
-      controls.target.copy(earthPosition)
-      previousEarthPositionRef.current.copy(earthPosition)
+      camera.position.copy(focusPosition).add(currentOffsetRef.current)
+      controls.target.copy(focusPosition)
+      previousEarthPositionRef.current.copy(focusPosition)
       initializedRef.current = true
       controls.update()
       return
     }
 
-    movementDeltaRef.current.copy(earthPosition).sub(previousEarthPositionRef.current)
+    movementDeltaRef.current.copy(focusPosition).sub(previousEarthPositionRef.current)
     if (movementDeltaRef.current.lengthSq() > 1e-8) {
       camera.position.add(movementDeltaRef.current)
     }
 
-    controls.target.copy(earthPosition)
-    previousEarthPositionRef.current.copy(earthPosition)
+    controls.target.copy(focusPosition)
+    previousEarthPositionRef.current.copy(focusPosition)
     controls.update()
   })
 
@@ -120,6 +142,7 @@ function CloseupFollower({ controlsRef, earthPositionRef }: CloseupFollowerProps
 export function SolarSystemScene() {
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
   const earthPositionRef = useRef(new Vector3())
+  const moonPositionRef = useRef(new Vector3())
   const insightsUpdatedAtRef = useRef(0)
 
   const {
@@ -166,7 +189,10 @@ export function SolarSystemScene() {
   )
 
   const visiblePlanets = useMemo(
-    () => (mode === 'closeup' ? scaledPlanets.filter((planet) => planet.id === 'earth') : scaledPlanets),
+    () =>
+      mode === 'closeup' || mode === 'mooncloseup'
+        ? scaledPlanets.filter((planet) => planet.id === 'earth')
+        : scaledPlanets,
     [mode, scaledPlanets],
   )
 
@@ -179,8 +205,11 @@ export function SolarSystemScene() {
     (payload: PlanetMotionPayload) => {
       const [x, y, z] = payload.worldPosition
       earthPositionRef.current.set(x, y, z)
+      if (payload.moonWorldPosition) {
+        moonPositionRef.current.set(payload.moonWorldPosition[0], payload.moonWorldPosition[1], payload.moonWorldPosition[2])
+      }
 
-      if (mode !== 'closeup' || typeof payload.moonOrbitAngle !== 'number') {
+      if ((mode !== 'closeup' && mode !== 'mooncloseup') || typeof payload.moonOrbitAngle !== 'number') {
         return
       }
 
@@ -208,9 +237,10 @@ export function SolarSystemScene() {
       <SceneFramer
         controlsRef={controlsRef}
         earthPositionRef={earthPositionRef}
+        moonPositionRef={moonPositionRef}
         fallbackEarthOrbitRadius={earthOrbitRadius}
       />
-      <CloseupFollower controlsRef={controlsRef} earthPositionRef={earthPositionRef} />
+      <CloseupFollower controlsRef={controlsRef} earthPositionRef={earthPositionRef} moonPositionRef={moonPositionRef} />
 
       <ambientLight intensity={0.25} />
       <pointLight position={[0, 0, 0]} intensity={2.2} distance={0} decay={2} />
@@ -235,6 +265,7 @@ export function SolarSystemScene() {
             timeScale={effectiveTimeScale}
             selected={selectedPlanetId === planet.id}
             showLabel={showLabels}
+            showOrbits={showOrbits}
             mode={mode}
             surfaceTemperatureMode={surfaceTemperatureMode}
             seasonJumpTarget={seasonJumpTarget}
@@ -247,11 +278,11 @@ export function SolarSystemScene() {
 
       <OrbitControls
         ref={controlsRef}
-        enablePan={mode !== 'closeup'}
-        minDistance={mode === 'closeup' ? 3 : 12}
-        maxDistance={mode === 'presentation' ? 500 : mode === 'closeup' ? 240 : 16000}
-        minPolarAngle={mode === 'closeup' ? 0.02 : 0}
-        maxPolarAngle={mode === 'closeup' ? Math.PI - 0.02 : Math.PI * 0.48}
+        enablePan={mode !== 'closeup' && mode !== 'mooncloseup'}
+        minDistance={mode === 'closeup' ? 3 : mode === 'mooncloseup' ? 1.2 : 12}
+        maxDistance={mode === 'presentation' ? 500 : mode === 'closeup' ? 240 : mode === 'mooncloseup' ? 120 : 16000}
+        minPolarAngle={mode === 'closeup' || mode === 'mooncloseup' ? 0.02 : 0}
+        maxPolarAngle={mode === 'closeup' || mode === 'mooncloseup' ? Math.PI - 0.02 : Math.PI * 0.48}
       />
     </Canvas>
   )

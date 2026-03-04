@@ -8,9 +8,9 @@ export function computeOrbitRadius(
   mode: DisplayMode,
   distanceScale: number,
 ): number {
-  if (mode === 'presentation' || mode === 'closeup') {
+  if (mode === 'presentation' || mode === 'closeup' || mode === 'mooncloseup') {
     const compressed = Math.pow(orbitRadiusAU, 0.58) * 24 + 10
-    const closeupTuning = mode === 'closeup' ? 0.92 : 1
+    const closeupTuning = mode === 'closeup' ? 0.92 : mode === 'mooncloseup' ? 0.9 : 1
     return compressed * distanceScale * closeupTuning
   }
 
@@ -20,9 +20,9 @@ export function computeOrbitRadius(
 export function computePlanetRadius(radiusKm: number, mode: DisplayMode, sizeExaggeration: number): number {
   const earthRatio = radiusKm / EARTH_RADIUS_KM
 
-  if (mode === 'presentation' || mode === 'closeup') {
-    const base = mode === 'closeup' ? 1.18 : 0.9
-    const exponent = mode === 'closeup' ? 0.47 : 0.45
+  if (mode === 'presentation' || mode === 'closeup' || mode === 'mooncloseup') {
+    const base = mode === 'closeup' ? 1.18 : mode === 'mooncloseup' ? 1.24 : 0.9
+    const exponent = mode === 'presentation' ? 0.45 : 0.47
     return Math.pow(earthRatio, exponent) * base * sizeExaggeration
   }
 
@@ -36,6 +36,10 @@ export function computeSunRadius(mode: DisplayMode, sizeExaggeration: number): n
 
   if (mode === 'closeup') {
     return 4.2 * sizeExaggeration
+  }
+
+  if (mode === 'mooncloseup') {
+    return 3.9 * sizeExaggeration
   }
 
   return 4.36 * sizeExaggeration

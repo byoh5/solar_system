@@ -192,6 +192,28 @@ export function ControlPanel() {
             </p>
           </div>
         )}
+
+        {mode === 'mooncloseup' && (
+          <div className="closeupCard">
+            <h3>달 클로즈업 관측 카드</h3>
+            <dl>
+              <div>
+                <dt>지구에서 보는 달 위상</dt>
+                <dd>{closeupInsights.moonPhaseName}</dd>
+              </div>
+              <div>
+                <dt>조명 비율</dt>
+                <dd>{moonLightPercent}%</dd>
+              </div>
+              <div>
+                <dt>연계 조석 상태</dt>
+                <dd>{closeupInsights.tideName}</dd>
+              </div>
+            </dl>
+            <p>태양 방향에 따라 달 표면 음영(명암 경계)이 바뀌며, 확대하면 달 지도의 크레이터/지형 질감을 볼 수 있습니다.</p>
+            <p className="closeupLegend">지구 기준 위상: 삭 → 상현 → 보름 → 하현 순서로 관찰됩니다.</p>
+          </div>
+        )}
       </section>
 
       <section className="panelSection infoCard">
