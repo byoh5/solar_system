@@ -218,8 +218,8 @@
 .videoDock.compact .videoPlayerCard {
   padding: 0.56rem;
   gap: 0.46rem;
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
+  min-height: auto;
 }
 
 .videoFrame {
@@ -234,8 +234,9 @@
 
 .videoDock.compact .videoFrame {
   padding-top: 0;
-  flex: 1;
-  min-height: 0;
+  aspect-ratio: 16 / 9;
+  flex: 0 0 auto;
+  min-height: auto;
 }
 
 .videoFrame iframe {
@@ -328,7 +329,8 @@
 }
 
 .videoDock.compact .videoListCard {
-  flex: 0 0 126px;
+  flex: 1;
+  min-height: 0;
   padding: 0.5rem;
   gap: 0.42rem;
 }
@@ -365,13 +367,11 @@
 .videoDock.compact .videoList {
   max-height: none;
   min-height: 0;
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 180px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
   gap: 0.34rem;
-  align-items: stretch;
 }
 
 .videoListItem {
@@ -418,7 +418,7 @@
 }
 
 .videoDock.compact .videoListItem {
-  grid-template-columns: 70px minmax(0, 1fr);
+  grid-template-columns: 84px minmax(0, 1fr);
   gap: 0.42rem;
   padding: 0.26rem;
 }
