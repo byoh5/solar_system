@@ -1,4 +1,4 @@
-import type { CloseupInsights } from '../store/solarSystemStore'
+import type { CloseupInsights, CloseupSeason } from '../store/solarSystemStore'
 
 const TWO_PI = Math.PI * 2
 const QUARTER_TURN = Math.PI / 2
@@ -127,3 +127,17 @@ export function computeCloseupInsights(earthOrbitAngle: number, moonOrbitAngle: 
   }
 }
 
+export function getOrbitAngleForSeason(season: CloseupSeason): number {
+  switch (season) {
+    case '봄':
+      return Math.PI / 2
+    case '여름':
+      return 0
+    case '가을':
+      return Math.PI * 1.5
+    case '겨울':
+      return Math.PI
+    default:
+      return 0
+  }
+}

@@ -122,15 +122,32 @@ export function SolarSystemScene() {
   const earthPositionRef = useRef(new Vector3())
   const insightsUpdatedAtRef = useRef(0)
 
-  const { mode, timeScale, distanceScale, sizeExaggeration, showOrbits, showLabels, selectedPlanetId, selectPlanet } =
+  const {
+    mode,
+    timeScale,
+    paused,
+    distanceScale,
+    sizeExaggeration,
+    showOrbits,
+    showLabels,
+    surfaceTemperatureMode,
+    seasonJumpTarget,
+    seasonJumpRequestId,
+    selectedPlanetId,
+    selectPlanet,
+  } =
     useSolarSystemStore(
       useShallow((state) => ({
         mode: state.mode,
         timeScale: state.timeScale,
+        paused: state.paused,
         distanceScale: state.distanceScale,
         sizeExaggeration: state.sizeExaggeration,
         showOrbits: state.showOrbits,
         showLabels: state.showLabels,
+        surfaceTemperatureMode: state.surfaceTemperatureMode,
+        seasonJumpTarget: state.seasonJumpTarget,
+        seasonJumpRequestId: state.seasonJumpRequestId,
         selectedPlanetId: state.selectedPlanetId,
         selectPlanet: state.selectPlanet,
       })),
@@ -179,6 +196,7 @@ export function SolarSystemScene() {
   )
 
   const sunRadius = computeSunRadius(mode, sizeExaggeration)
+  const effectiveTimeScale = paused ? 0 : timeScale
 
   return (
     <Canvas
@@ -214,10 +232,13 @@ export function SolarSystemScene() {
             planet={planet}
             orbitRadius={planet.renderOrbitRadius}
             radius={planet.renderRadius}
-            timeScale={timeScale}
+            timeScale={effectiveTimeScale}
             selected={selectedPlanetId === planet.id}
             showLabel={showLabels}
             mode={mode}
+            surfaceTemperatureMode={surfaceTemperatureMode}
+            seasonJumpTarget={seasonJumpTarget}
+            seasonJumpRequestId={seasonJumpRequestId}
             onSelect={selectPlanet}
             onMotionUpdate={planet.id === 'earth' ? handleEarthMotion : undefined}
           />

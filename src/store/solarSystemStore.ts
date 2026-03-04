@@ -2,9 +2,10 @@ import { create } from 'zustand'
 import type { PlanetId } from '../data/planetData'
 
 export type DisplayMode = 'presentation' | 'realistic' | 'closeup'
+export type CloseupSeason = '봄' | '여름' | '가을' | '겨울'
 
 export interface CloseupInsights {
-  seasonName: '봄' | '여름' | '가을' | '겨울'
+  seasonName: CloseupSeason
   seasonDetail: string
   moonPhaseName: string
   moonLightRatio: number
@@ -30,7 +31,7 @@ const modePresets: Record<DisplayMode, ModePreset> = {
     sizeExaggeration: 1,
   },
   closeup: {
-    timeScale: 12,
+    timeScale: 0.25,
     distanceScale: 1,
     sizeExaggeration: 1.8,
   },
@@ -52,14 +53,21 @@ interface SolarSystemState {
   sizeExaggeration: number
   showOrbits: boolean
   showLabels: boolean
+  paused: boolean
+  surfaceTemperatureMode: boolean
   selectedPlanetId: PlanetId | null
   closeupInsights: CloseupInsights
+  seasonJumpTarget: CloseupSeason
+  seasonJumpRequestId: number
   frameRequest: number
   setMode: (mode: DisplayMode) => void
   setTimeScale: (value: number) => void
   setDistanceScale: (value: number) => void
   setSizeExaggeration: (value: number) => void
   setCloseupInsights: (insights: CloseupInsights) => void
+  togglePause: () => void
+  toggleSurfaceTemperatureMode: () => void
+  jumpToSeason: (season: CloseupSeason) => void
   toggleOrbits: () => void
   toggleLabels: () => void
   selectPlanet: (planetId: PlanetId | null) => void
@@ -75,8 +83,12 @@ export const useSolarSystemStore = create<SolarSystemState>((set) => ({
   ...defaultPreset,
   showOrbits: true,
   showLabels: true,
+  paused: false,
+  surfaceTemperatureMode: true,
   selectedPlanetId: null,
   closeupInsights: defaultCloseupInsights,
+  seasonJumpTarget: '여름',
+  seasonJumpRequestId: 0,
   frameRequest: 0,
   setMode: (mode) => {
     const preset = modePresets[mode]
@@ -85,6 +97,7 @@ export const useSolarSystemStore = create<SolarSystemState>((set) => ({
       timeScale: preset.timeScale,
       distanceScale: preset.distanceScale,
       sizeExaggeration: preset.sizeExaggeration,
+      paused: false,
       frameRequest: state.frameRequest + 1,
     }))
   },
@@ -92,6 +105,18 @@ export const useSolarSystemStore = create<SolarSystemState>((set) => ({
   setDistanceScale: (value) => set({ distanceScale: value }),
   setSizeExaggeration: (value) => set({ sizeExaggeration: value }),
   setCloseupInsights: (closeupInsights) => set({ closeupInsights }),
+  togglePause: () => set((state) => ({ paused: !state.paused })),
+  toggleSurfaceTemperatureMode: () =>
+    set((state) => ({
+      surfaceTemperatureMode: !state.surfaceTemperatureMode,
+    })),
+  jumpToSeason: (seasonJumpTarget) =>
+    set((state) => ({
+      mode: 'closeup',
+      seasonJumpTarget,
+      seasonJumpRequestId: state.seasonJumpRequestId + 1,
+      frameRequest: state.frameRequest + 1,
+    })),
   toggleOrbits: () => set((state) => ({ showOrbits: !state.showOrbits })),
   toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
   selectPlanet: (planetId) => set({ selectedPlanetId: planetId }),
@@ -102,8 +127,12 @@ export const useSolarSystemStore = create<SolarSystemState>((set) => ({
       ...defaultPreset,
       showOrbits: true,
       showLabels: true,
+      paused: false,
+      surfaceTemperatureMode: true,
       selectedPlanetId: null,
       closeupInsights: defaultCloseupInsights,
+      seasonJumpTarget: '여름',
+      seasonJumpRequestId: state.seasonJumpRequestId,
       frameRequest: state.frameRequest + 1,
     })),
 }))

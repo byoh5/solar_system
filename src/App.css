@@ -147,6 +147,37 @@ input[type='range'] {
   accent-color: var(--accent-strong);
 }
 
+.quickActionRow {
+  margin-top: 0.62rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.panelActionButton {
+  border: 1px solid rgba(173, 219, 255, 0.48);
+  border-radius: 999px;
+  background: rgba(24, 50, 90, 0.56);
+  color: #e9f2ff;
+  padding: 0.34rem 0.74rem;
+  cursor: pointer;
+  transition: transform 0.18s ease, background-color 0.18s ease;
+}
+
+.panelActionButton:hover {
+  transform: translateY(-1px);
+  background: rgba(40, 76, 129, 0.72);
+}
+
+.panelInlineToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  font-size: 0.85rem;
+  color: #dbe9ff;
+}
+
 .toggleRow {
   margin-top: 0.8rem;
   display: grid;
@@ -215,6 +246,36 @@ input[type='range'] {
   color: #d6e5ff;
   font-size: 0.83rem;
   line-height: 1.45;
+}
+
+.seasonJumpTitle {
+  margin: 0.72rem 0 0.3rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #d9ecff;
+}
+
+.seasonJumpRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+}
+
+.seasonJumpButton {
+  border: 1px solid rgba(151, 202, 255, 0.45);
+  border-radius: 999px;
+  background: rgba(14, 35, 66, 0.64);
+  color: #d9e7ff;
+  padding: 0.26rem 0.62rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.seasonJumpButton.active {
+  background: linear-gradient(125deg, rgba(126, 197, 255, 0.92), rgba(106, 232, 207, 0.9));
+  color: #042036;
+  border-color: rgba(184, 247, 255, 0.92);
+  font-weight: 700;
 }
 
 .closeupLegend {

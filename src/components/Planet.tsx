@@ -1,9 +1,10 @@
 import { Text } from '@react-three/drei'
 import { useFrame, useLoader, type ThreeEvent } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import {
   AdditiveBlending,
   DoubleSide,
+  Quaternion,
   ShaderMaterial,
   TextureLoader,
   Vector3,
@@ -11,7 +12,8 @@ import {
   type Mesh,
 } from 'three'
 import type { PlanetData } from '../data/planetData'
-import type { DisplayMode } from '../store/solarSystemStore'
+import type { CloseupSeason, DisplayMode } from '../store/solarSystemStore'
+import { getOrbitAngleForSeason } from '../utils/earthScience'
 
 export type PlanetMotionPayload = {
   planetId: PlanetData['id']
@@ -29,6 +31,9 @@ type PlanetProps = {
   selected: boolean
   showLabel: boolean
   mode: DisplayMode
+  surfaceTemperatureMode: boolean
+  seasonJumpTarget: CloseupSeason
+  seasonJumpRequestId: number
   onSelect: (planetId: PlanetData['id']) => void
   onMotionUpdate?: (payload: PlanetMotionPayload) => void
 }
@@ -47,22 +52,37 @@ const EARTH_HEAT_VERTEX_SHADER = `
 `
 const EARTH_HEAT_FRAGMENT_SHADER = `
   uniform vec3 uSunDirection;
+  uniform vec3 uNorthAxis;
+  uniform float uSeasonStrength;
+  uniform float uModeIntensity;
   uniform float uSelectionBoost;
   varying vec3 vWorldNormal;
 
   void main() {
-    float solar = max(dot(normalize(vWorldNormal), normalize(uSunDirection)), 0.0);
-    float warmBand = smoothstep(0.22, 0.9, solar);
-    float hotCore = smoothstep(0.62, 1.0, solar);
+    vec3 n = normalize(vWorldNormal);
+    vec3 sunDir = normalize(uSunDirection);
+    vec3 northAxis = normalize(uNorthAxis);
 
-    vec3 coldColor = vec3(0.07, 0.24, 0.70);
-    vec3 warmColor = vec3(0.16, 0.82, 0.80);
-    vec3 hotColor = vec3(1.0, 0.44, 0.14);
+    float dayTerm = smoothstep(-0.25, 0.65, dot(n, sunDir));
+    float latitudeBand = 1.0 - abs(dot(n, northAxis));
+    float seasonalShift = (dot(n, northAxis) * uSeasonStrength + 1.0) * 0.5;
+    float tempLevel = dayTerm * 0.42 + latitudeBand * 0.33 + seasonalShift * 0.25;
 
-    vec3 tone = mix(coldColor, warmColor, warmBand);
-    tone = mix(tone, hotColor, hotCore);
+    float coolBand = smoothstep(0.0, 0.5, tempLevel);
+    float warmBand = smoothstep(0.28, 0.78, tempLevel);
+    float hotBand = smoothstep(0.68, 1.0, tempLevel);
 
-    float alpha = 0.08 + warmBand * 0.26 + hotCore * 0.2;
+    vec3 coldColor = vec3(0.06, 0.20, 0.60);
+    vec3 mildColor = vec3(0.10, 0.68, 0.88);
+    vec3 warmColor = vec3(0.95, 0.81, 0.30);
+    vec3 hotColor = vec3(0.92, 0.29, 0.14);
+
+    vec3 tone = mix(coldColor, mildColor, coolBand);
+    tone = mix(tone, warmColor, warmBand);
+    tone = mix(tone, hotColor, hotBand);
+
+    float baseAlpha = 0.18 + warmBand * 0.18 + hotBand * 0.16;
+    float alpha = baseAlpha * (0.25 + uModeIntensity * 0.75);
     alpha *= (0.92 + uSelectionBoost * 0.18);
 
     gl_FragColor = vec4(tone, alpha);
@@ -77,6 +97,9 @@ export function Planet({
   selected,
   showLabel,
   mode,
+  surfaceTemperatureMode,
+  seasonJumpTarget,
+  seasonJumpRequestId,
   onSelect,
   onMotionUpdate,
 }: PlanetProps) {
@@ -108,13 +131,38 @@ export function Planet({
   const worldPositionRef = useRef(new Vector3())
   const moonWorldPositionRef = useRef(new Vector3())
   const sunDirectionRef = useRef(new Vector3(1, 0, 0))
+  const earthNorthAxisRef = useRef(new Vector3(0, 1, 0))
+  const earthWorldQuaternionRef = useRef(new Quaternion())
   const heatOverlayUniforms = useMemo(
     () => ({
       uSunDirection: { value: new Vector3(1, 0, 0) },
+      uNorthAxis: { value: new Vector3(0, 1, 0) },
+      uSeasonStrength: { value: 1 },
+      uModeIntensity: { value: 1 },
       uSelectionBoost: { value: 0 },
     }),
     [],
   )
+
+  useEffect(() => {
+    if (!isEarth) {
+      return
+    }
+
+    const targetOrbitAngle = getOrbitAngleForSeason(seasonJumpTarget)
+    orbitAngleRef.current = targetOrbitAngle
+
+    const orbitGroup = orbitGroupRef.current
+    if (orbitGroup) {
+      orbitGroup.rotation.y = targetOrbitAngle
+    }
+
+    const earthAxisFrame = earthAxisFrameRef.current
+    if (earthAxisFrame) {
+      earthAxisFrame.rotation.y = -targetOrbitAngle
+      earthAxisFrame.rotation.z = EARTH_AXIAL_TILT_RAD
+    }
+  }, [isEarth, seasonJumpRequestId, seasonJumpTarget])
 
   useFrame((_state, delta) => {
     const orbitGroup = orbitGroupRef.current
@@ -175,9 +223,21 @@ export function Planet({
         sunDirection.normalize()
       }
 
+      const earthAxisFrame = earthAxisFrameRef.current
+      if (earthAxisFrame) {
+        earthAxisFrame.getWorldQuaternion(earthWorldQuaternionRef.current)
+        earthNorthAxisRef.current
+          .set(0, 1, 0)
+          .applyQuaternion(earthWorldQuaternionRef.current)
+          .normalize()
+      }
+
       const heatOverlayMaterial = heatOverlayMaterialRef.current
       if (heatOverlayMaterial) {
         ;(heatOverlayMaterial.uniforms.uSunDirection.value as Vector3).copy(sunDirection)
+        ;(heatOverlayMaterial.uniforms.uNorthAxis.value as Vector3).copy(earthNorthAxisRef.current)
+        heatOverlayMaterial.uniforms.uSeasonStrength.value = Math.cos(-orbitAngleRef.current)
+        heatOverlayMaterial.uniforms.uModeIntensity.value = surfaceTemperatureMode ? 1 : 0
         heatOverlayMaterial.uniforms.uSelectionBoost.value = selected ? 1 : 0
       }
 
@@ -262,7 +322,7 @@ export function Planet({
                 />
               </mesh>
 
-              {mode === 'closeup' && (
+              {mode === 'closeup' && surfaceTemperatureMode && (
                 <mesh scale={[1.018, 1.018, 1.018]}>
                   <sphereGeometry args={[radius * (selected ? 1.15 : 1), 48, 48]} />
                   <shaderMaterial

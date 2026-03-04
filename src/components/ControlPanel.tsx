@@ -1,5 +1,5 @@
 import { planetMap } from '../data/planetData'
-import { useSolarSystemStore } from '../store/solarSystemStore'
+import { useSolarSystemStore, type CloseupSeason } from '../store/solarSystemStore'
 import { useShallow } from 'zustand/react/shallow'
 
 function formatRotationPeriod(hours: number): string {
@@ -14,34 +14,58 @@ function formatRotationPeriod(hours: number): string {
   return `${absoluteHours.toFixed(1)}시간${isRetrograde ? ' (역자전)' : ''}`
 }
 
+function formatTimeScale(daysPerSecond: number): string {
+  if (daysPerSecond >= 10) {
+    return daysPerSecond.toFixed(0)
+  }
+
+  if (daysPerSecond >= 1) {
+    return daysPerSecond.toFixed(1)
+  }
+
+  return daysPerSecond.toFixed(2)
+}
+
+const closeupSeasonOrder: CloseupSeason[] = ['봄', '여름', '가을', '겨울']
+
 export function ControlPanel() {
   const {
     mode,
     timeScale,
+    paused,
     distanceScale,
     sizeExaggeration,
     showOrbits,
     showLabels,
+    surfaceTemperatureMode,
     closeupInsights,
     selectedPlanetId,
     setTimeScale,
     setDistanceScale,
     setSizeExaggeration,
+    togglePause,
+    toggleSurfaceTemperatureMode,
+    jumpToSeason,
     toggleOrbits,
     toggleLabels,
   } = useSolarSystemStore(
     useShallow((state) => ({
       mode: state.mode,
       timeScale: state.timeScale,
+      paused: state.paused,
       distanceScale: state.distanceScale,
       sizeExaggeration: state.sizeExaggeration,
       showOrbits: state.showOrbits,
       showLabels: state.showLabels,
+      surfaceTemperatureMode: state.surfaceTemperatureMode,
       closeupInsights: state.closeupInsights,
       selectedPlanetId: state.selectedPlanetId,
       setTimeScale: state.setTimeScale,
       setDistanceScale: state.setDistanceScale,
       setSizeExaggeration: state.setSizeExaggeration,
+      togglePause: state.togglePause,
+      toggleSurfaceTemperatureMode: state.toggleSurfaceTemperatureMode,
+      jumpToSeason: state.jumpToSeason,
       toggleOrbits: state.toggleOrbits,
       toggleLabels: state.toggleLabels,
     })),
@@ -57,17 +81,33 @@ export function ControlPanel() {
         <p className="sectionHint">모드와 슬라이더를 조합해 공전/자전, 계절, 달 위상, 조석 변화를 확인하세요.</p>
 
         <label className="rangeLabel" htmlFor="timeScale">
-          시간 가속: <strong>1초 = {timeScale.toFixed(0)}일</strong>
+          시간 가속: <strong>1초 = {formatTimeScale(timeScale)}일</strong>
         </label>
         <input
           id="timeScale"
           type="range"
-          min={1}
+          min={0.05}
           max={120}
-          step={1}
+          step={0.05}
           value={timeScale}
           onChange={(event) => setTimeScale(Number(event.target.value))}
         />
+
+        <div className="quickActionRow">
+          <button className="panelActionButton" onClick={togglePause}>
+            {paused ? '재생' : '일시정지'}
+          </button>
+          {mode === 'closeup' && (
+            <label className="panelInlineToggle">
+              <input
+                type="checkbox"
+                checked={surfaceTemperatureMode}
+                onChange={toggleSurfaceTemperatureMode}
+              />
+              표면 온도 모드
+            </label>
+          )}
+        </div>
 
         <label className="rangeLabel" htmlFor="distanceScale">
           거리 스케일: <strong>{distanceScale.toFixed(2)}x</strong>
@@ -131,9 +171,25 @@ export function ControlPanel() {
                 <dd>{closeupInsights.tideName}</dd>
               </div>
             </dl>
+            <p className="seasonJumpTitle">계절 바로 이동</p>
+            <div className="seasonJumpRow">
+              {closeupSeasonOrder.map((season) => (
+                <button
+                  key={season}
+                  className={`seasonJumpButton ${closeupInsights.seasonName === season ? 'active' : ''}`}
+                  onClick={() => jumpToSeason(season)}
+                >
+                  {season}
+                </button>
+              ))}
+            </div>
             <p>{closeupInsights.seasonDetail}</p>
             <p>{closeupInsights.tideDetail}</p>
-            <p className="closeupLegend">온도색: 파랑(저온) → 청록(온난) → 주황(고온, 태양 입사각 큼)</p>
+            <p className="closeupLegend">
+              {surfaceTemperatureMode
+                ? '온도색: 파랑(저온) → 청록(온난) → 노랑/주황(고온), 계절에 따라 반구별 분포가 바뀝니다.'
+                : '표면 온도 모드를 켜면 계절별 지표면 온도 분포를 색상으로 볼 수 있습니다.'}
+            </p>
           </div>
         )}
       </section>
