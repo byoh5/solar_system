@@ -66,12 +66,12 @@ function OrbitalOverview({
 
   const earthPos = {
     x: sunCenter.x + Math.cos(earthAngle) * earthRadius,
-    y: sunCenter.y + Math.sin(earthAngle) * earthRadius,
+    y: sunCenter.y - Math.sin(earthAngle) * earthRadius,
   }
 
   const moonPos = {
     x: earthPos.x + Math.cos(moonAngle) * moonRadius,
-    y: earthPos.y + Math.sin(moonAngle) * moonRadius,
+    y: earthPos.y - Math.sin(moonAngle) * moonRadius,
   }
 
   return (
