@@ -278,6 +278,79 @@ input[type='range'] {
   font-weight: 700;
 }
 
+.orbitalOverview {
+  position: relative;
+  width: 208px;
+  height: 208px;
+  margin-top: 0.3rem;
+  border-radius: 14px;
+  border: 1px solid rgba(153, 203, 255, 0.32);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(17, 34, 64, 0.9) 0%, rgba(7, 14, 30, 0.9) 70%),
+    linear-gradient(135deg, rgba(15, 26, 49, 0.88), rgba(7, 15, 28, 0.9));
+}
+
+.overviewOrbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.sunOrbit {
+  width: 116px;
+  height: 116px;
+  border: 1px dashed rgba(135, 183, 255, 0.32);
+}
+
+.overviewLine {
+  position: absolute;
+  height: 1px;
+  transform-origin: left center;
+  background: rgba(255, 215, 124, 0.76);
+  pointer-events: none;
+}
+
+.overviewLine.moonLink {
+  background: rgba(183, 211, 255, 0.72);
+}
+
+.overviewBody {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.overviewBody.sun {
+  padding: 0.2rem 0.45rem;
+  color: #351d02;
+  font-weight: 700;
+  background: radial-gradient(circle, #ffd86c 0%, #ffb54f 72%);
+  box-shadow: 0 0 14px rgba(255, 183, 76, 0.4);
+}
+
+.overviewBody.earth {
+  padding: 0.18rem 0.4rem;
+  color: #e8f3ff;
+  font-weight: 700;
+  background: radial-gradient(circle, #5f9dff 0%, #3566c6 72%);
+}
+
+.overviewBody.moon {
+  padding: 0.15rem 0.34rem;
+  color: #101620;
+  font-weight: 700;
+  background: radial-gradient(circle, #e4e9f1 0%, #aeb9c8 76%);
+}
+
 .closeupLegend {
   color: #dff5ff;
   font-weight: 600;

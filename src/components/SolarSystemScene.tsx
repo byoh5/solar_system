@@ -156,6 +156,8 @@ export function SolarSystemScene() {
     surfaceTemperatureMode,
     seasonJumpTarget,
     seasonJumpRequestId,
+    moonPhaseJumpTarget,
+    moonPhaseJumpRequestId,
     selectedPlanetId,
     selectPlanet,
   } =
@@ -171,6 +173,8 @@ export function SolarSystemScene() {
         surfaceTemperatureMode: state.surfaceTemperatureMode,
         seasonJumpTarget: state.seasonJumpTarget,
         seasonJumpRequestId: state.seasonJumpRequestId,
+        moonPhaseJumpTarget: state.moonPhaseJumpTarget,
+        moonPhaseJumpRequestId: state.moonPhaseJumpRequestId,
         selectedPlanetId: state.selectedPlanetId,
         selectPlanet: state.selectPlanet,
       })),
@@ -270,6 +274,8 @@ export function SolarSystemScene() {
             surfaceTemperatureMode={surfaceTemperatureMode}
             seasonJumpTarget={seasonJumpTarget}
             seasonJumpRequestId={seasonJumpRequestId}
+            moonPhaseJumpTarget={moonPhaseJumpTarget}
+            moonPhaseJumpRequestId={moonPhaseJumpRequestId}
             onSelect={selectPlanet}
             onMotionUpdate={planet.id === 'earth' ? handleEarthMotion : undefined}
           />

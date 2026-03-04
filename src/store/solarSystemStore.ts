@@ -3,6 +3,7 @@ import type { PlanetId } from '../data/planetData'
 
 export type DisplayMode = 'presentation' | 'realistic' | 'closeup' | 'mooncloseup'
 export type CloseupSeason = '봄' | '여름' | '가을' | '겨울'
+export type MoonPhaseTarget = '삭' | '상현' | '보름' | '하현'
 
 export interface CloseupInsights {
   seasonName: CloseupSeason
@@ -11,6 +12,8 @@ export interface CloseupInsights {
   moonLightRatio: number
   tideName: string
   tideDetail: string
+  earthOrbitAngle: number
+  moonOrbitAngle: number
 }
 
 type ModePreset = {
@@ -49,6 +52,8 @@ const defaultCloseupInsights: CloseupInsights = {
   moonLightRatio: 0.5,
   tideName: '중간 조차',
   tideDetail: '달-태양 배치가 완전히 일직선은 아니라 조차가 중간 수준입니다.',
+  earthOrbitAngle: 0,
+  moonOrbitAngle: Math.PI * 1.5,
 }
 
 interface SolarSystemState {
@@ -64,6 +69,8 @@ interface SolarSystemState {
   closeupInsights: CloseupInsights
   seasonJumpTarget: CloseupSeason
   seasonJumpRequestId: number
+  moonPhaseJumpTarget: MoonPhaseTarget
+  moonPhaseJumpRequestId: number
   frameRequest: number
   setMode: (mode: DisplayMode) => void
   setTimeScale: (value: number) => void
@@ -73,6 +80,7 @@ interface SolarSystemState {
   togglePause: () => void
   toggleSurfaceTemperatureMode: () => void
   jumpToSeason: (season: CloseupSeason) => void
+  jumpToMoonPhase: (phase: MoonPhaseTarget) => void
   toggleOrbits: () => void
   toggleLabels: () => void
   selectPlanet: (planetId: PlanetId | null) => void
@@ -94,6 +102,8 @@ export const useSolarSystemStore = create<SolarSystemState>((set) => ({
   closeupInsights: defaultCloseupInsights,
   seasonJumpTarget: '여름',
   seasonJumpRequestId: 0,
+  moonPhaseJumpTarget: '보름',
+  moonPhaseJumpRequestId: 0,
   frameRequest: 0,
   setMode: (mode) => {
     const preset = modePresets[mode]
@@ -122,6 +132,13 @@ export const useSolarSystemStore = create<SolarSystemState>((set) => ({
       seasonJumpRequestId: state.seasonJumpRequestId + 1,
       frameRequest: state.frameRequest + 1,
     })),
+  jumpToMoonPhase: (moonPhaseJumpTarget) =>
+    set((state) => ({
+      mode: 'mooncloseup',
+      moonPhaseJumpTarget,
+      moonPhaseJumpRequestId: state.moonPhaseJumpRequestId + 1,
+      frameRequest: state.frameRequest + 1,
+    })),
   toggleOrbits: () => set((state) => ({ showOrbits: !state.showOrbits })),
   toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
   selectPlanet: (planetId) => set({ selectedPlanetId: planetId }),
@@ -138,6 +155,8 @@ export const useSolarSystemStore = create<SolarSystemState>((set) => ({
       closeupInsights: defaultCloseupInsights,
       seasonJumpTarget: '여름',
       seasonJumpRequestId: state.seasonJumpRequestId,
+      moonPhaseJumpTarget: '보름',
+      moonPhaseJumpRequestId: state.moonPhaseJumpRequestId,
       frameRequest: state.frameRequest + 1,
     })),
 }))

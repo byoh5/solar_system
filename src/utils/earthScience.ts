@@ -1,4 +1,4 @@
-import type { CloseupInsights, CloseupSeason } from '../store/solarSystemStore'
+import type { CloseupInsights, CloseupSeason, MoonPhaseTarget } from '../store/solarSystemStore'
 
 const TWO_PI = Math.PI * 2
 const QUARTER_TURN = Math.PI / 2
@@ -124,6 +124,8 @@ export function computeCloseupInsights(earthOrbitAngle: number, moonOrbitAngle: 
     ...resolveSeason(seasonPhase),
     ...resolveMoonPhase(phaseCycle),
     ...resolveTides(phaseCycle),
+    earthOrbitAngle: normalizeAngle(earthOrbitAngle),
+    moonOrbitAngle: normalizeAngle(moonOrbitAngle),
   }
 }
 
@@ -140,4 +142,28 @@ export function getOrbitAngleForSeason(season: CloseupSeason): number {
     default:
       return 0
   }
+}
+
+export function getMoonOrbitAngleForPhase(phase: MoonPhaseTarget): number {
+  let phaseCycle = 0
+
+  switch (phase) {
+    case '삭':
+      phaseCycle = 0
+      break
+    case '상현':
+      phaseCycle = Math.PI / 2
+      break
+    case '보름':
+      phaseCycle = Math.PI
+      break
+    case '하현':
+      phaseCycle = Math.PI * 1.5
+      break
+    default:
+      phaseCycle = Math.PI
+      break
+  }
+
+  return normalizeAngle(phaseCycle + Math.PI)
 }

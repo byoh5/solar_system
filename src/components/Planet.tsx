@@ -12,8 +12,8 @@ import {
   type Mesh,
 } from 'three'
 import type { PlanetData } from '../data/planetData'
-import type { CloseupSeason, DisplayMode } from '../store/solarSystemStore'
-import { getOrbitAngleForSeason } from '../utils/earthScience'
+import type { CloseupSeason, DisplayMode, MoonPhaseTarget } from '../store/solarSystemStore'
+import { getMoonOrbitAngleForPhase, getOrbitAngleForSeason } from '../utils/earthScience'
 
 export type PlanetMotionPayload = {
   planetId: PlanetData['id']
@@ -35,6 +35,8 @@ type PlanetProps = {
   surfaceTemperatureMode: boolean
   seasonJumpTarget: CloseupSeason
   seasonJumpRequestId: number
+  moonPhaseJumpTarget: MoonPhaseTarget
+  moonPhaseJumpRequestId: number
   onSelect: (planetId: PlanetData['id']) => void
   onMotionUpdate?: (payload: PlanetMotionPayload) => void
 }
@@ -111,6 +113,29 @@ const MOON_PHASE_FRAGMENT_SHADER = `
     gl_FragColor = vec4(shadowColor, darkness);
   }
 `
+const MOON_BRIGHT_VERTEX_SHADER = `
+  varying vec3 vWorldNormal;
+
+  void main() {
+    vWorldNormal = normalize(mat3(modelMatrix) * normal);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`
+const MOON_BRIGHT_FRAGMENT_SHADER = `
+  uniform vec3 uSunDirection;
+  uniform float uBrightStrength;
+  varying vec3 vWorldNormal;
+
+  void main() {
+    float lit = max(dot(normalize(vWorldNormal), normalize(uSunDirection)), 0.0);
+    float brightCore = smoothstep(0.2, 1.0, lit);
+    float edgeGlow = smoothstep(0.0, 0.35, lit) * (1.0 - smoothstep(0.35, 0.9, lit));
+    float alpha = brightCore * uBrightStrength + edgeGlow * uBrightStrength * 0.42;
+    vec3 glowColor = vec3(1.0, 0.98, 0.92);
+
+    gl_FragColor = vec4(glowColor, alpha);
+  }
+`
 
 export function Planet({
   planet,
@@ -124,6 +149,8 @@ export function Planet({
   surfaceTemperatureMode,
   seasonJumpTarget,
   seasonJumpRequestId,
+  moonPhaseJumpTarget,
+  moonPhaseJumpRequestId,
   onSelect,
   onMotionUpdate,
 }: PlanetProps) {
@@ -156,6 +183,7 @@ export function Planet({
   const moonAnchorRef = useRef<Group>(null)
   const moonMeshRef = useRef<Mesh>(null)
   const moonPhaseOverlayMaterialRef = useRef<ShaderMaterial>(null)
+  const moonBrightOverlayMaterialRef = useRef<ShaderMaterial>(null)
   const moonOrbitAngleRef = useRef((planet.orbitRadiusAU * 1.91 + radius) % TWO_PI)
   const worldPositionRef = useRef(new Vector3())
   const moonWorldPositionRef = useRef(new Vector3())
@@ -180,6 +208,13 @@ export function Planet({
     }),
     [],
   )
+  const moonBrightUniforms = useMemo(
+    () => ({
+      uSunDirection: { value: new Vector3(1, 0, 0) },
+      uBrightStrength: { value: 0.34 },
+    }),
+    [],
+  )
 
   useEffect(() => {
     if (!isEarth) {
@@ -200,6 +235,20 @@ export function Planet({
       earthAxisFrame.rotation.z = EARTH_AXIAL_TILT_RAD
     }
   }, [isEarth, seasonJumpRequestId, seasonJumpTarget])
+
+  useEffect(() => {
+    if (!isEarth) {
+      return
+    }
+
+    const targetMoonOrbitAngle = getMoonOrbitAngleForPhase(moonPhaseJumpTarget)
+    moonOrbitAngleRef.current = targetMoonOrbitAngle
+
+    const moonOrbitGroup = moonOrbitGroupRef.current
+    if (moonOrbitGroup) {
+      moonOrbitGroup.rotation.y = targetMoonOrbitAngle
+    }
+  }, [isEarth, moonPhaseJumpRequestId, moonPhaseJumpTarget])
 
   useFrame((_state, delta) => {
     const orbitGroup = orbitGroupRef.current
@@ -297,6 +346,12 @@ export function Planet({
         if (moonPhaseOverlayMaterial) {
           ;(moonPhaseOverlayMaterial.uniforms.uSunDirection.value as Vector3).copy(moonSunDirection)
           moonPhaseOverlayMaterial.uniforms.uShadowStrength.value = mode === 'mooncloseup' ? 0.92 : 0.82
+        }
+
+        const moonBrightOverlayMaterial = moonBrightOverlayMaterialRef.current
+        if (moonBrightOverlayMaterial) {
+          ;(moonBrightOverlayMaterial.uniforms.uSunDirection.value as Vector3).copy(moonSunDirection)
+          moonBrightOverlayMaterial.uniforms.uBrightStrength.value = mode === 'mooncloseup' ? 0.54 : 0.36
         }
       }
     }
@@ -473,10 +528,23 @@ export function Planet({
                     map={moonDayMap}
                     bumpMap={moonDayMap}
                     bumpScale={mode === 'mooncloseup' ? 0.085 : 0.05}
-                    shininess={2}
-                    specular="#2f3442"
-                    emissive="#05070f"
-                    emissiveIntensity={0.05}
+                    shininess={5}
+                    specular="#4a5263"
+                    emissive="#090d17"
+                    emissiveIntensity={0.08}
+                  />
+                </mesh>
+
+                <mesh scale={[1.004, 1.004, 1.004]}>
+                  <sphereGeometry args={[moonRadius, mode === 'mooncloseup' ? 56 : 30, mode === 'mooncloseup' ? 56 : 30]} />
+                  <shaderMaterial
+                    ref={moonBrightOverlayMaterialRef}
+                    uniforms={moonBrightUniforms}
+                    vertexShader={MOON_BRIGHT_VERTEX_SHADER}
+                    fragmentShader={MOON_BRIGHT_FRAGMENT_SHADER}
+                    transparent
+                    depthWrite={false}
+                    blending={AdditiveBlending}
                   />
                 </mesh>
 

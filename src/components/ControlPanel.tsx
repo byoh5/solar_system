@@ -1,5 +1,5 @@
 import { planetMap } from '../data/planetData'
-import { useSolarSystemStore, type CloseupSeason } from '../store/solarSystemStore'
+import { useSolarSystemStore, type CloseupSeason, type MoonPhaseTarget } from '../store/solarSystemStore'
 import { useShallow } from 'zustand/react/shallow'
 
 function formatRotationPeriod(hours: number): string {
@@ -27,6 +27,86 @@ function formatTimeScale(daysPerSecond: number): string {
 }
 
 const closeupSeasonOrder: CloseupSeason[] = ['봄', '여름', '가을', '겨울']
+const moonPhaseTargets: MoonPhaseTarget[] = ['삭', '상현', '보름', '하현']
+
+function normalizeAngle(angle: number): number {
+  const twoPi = Math.PI * 2
+  const wrapped = angle % twoPi
+  return wrapped >= 0 ? wrapped : wrapped + twoPi
+}
+
+function resolveMoonPhaseShortName(name: string): MoonPhaseTarget {
+  if (name.includes('상현')) {
+    return '상현'
+  }
+
+  if (name.includes('망') || name.includes('보름')) {
+    return '보름'
+  }
+
+  if (name.includes('하현')) {
+    return '하현'
+  }
+
+  return '삭'
+}
+
+function OrbitalOverview({
+  earthOrbitAngle,
+  moonOrbitAngle,
+}: {
+  earthOrbitAngle: number
+  moonOrbitAngle: number
+}) {
+  const sunCenter = { x: 104, y: 104 }
+  const earthRadius = 58
+  const moonRadius = 26
+  const earthAngle = normalizeAngle(earthOrbitAngle)
+  const moonAngle = normalizeAngle(moonOrbitAngle)
+
+  const earthPos = {
+    x: sunCenter.x + Math.cos(earthAngle) * earthRadius,
+    y: sunCenter.y + Math.sin(earthAngle) * earthRadius,
+  }
+
+  const moonPos = {
+    x: earthPos.x + Math.cos(moonAngle) * moonRadius,
+    y: earthPos.y + Math.sin(moonAngle) * moonRadius,
+  }
+
+  return (
+    <div className="orbitalOverview">
+      <div className="overviewOrbit sunOrbit" />
+      <div
+        className="overviewLine"
+        style={{
+          left: sunCenter.x,
+          top: sunCenter.y,
+          width: Math.hypot(earthPos.x - sunCenter.x, earthPos.y - sunCenter.y),
+          transform: `rotate(${Math.atan2(earthPos.y - sunCenter.y, earthPos.x - sunCenter.x)}rad)`,
+        }}
+      />
+      <div
+        className="overviewLine moonLink"
+        style={{
+          left: earthPos.x,
+          top: earthPos.y,
+          width: Math.hypot(moonPos.x - earthPos.x, moonPos.y - earthPos.y),
+          transform: `rotate(${Math.atan2(moonPos.y - earthPos.y, moonPos.x - earthPos.x)}rad)`,
+        }}
+      />
+      <span className="overviewBody sun" style={{ left: sunCenter.x, top: sunCenter.y }}>
+        태양
+      </span>
+      <span className="overviewBody earth" style={{ left: earthPos.x, top: earthPos.y }}>
+        지구
+      </span>
+      <span className="overviewBody moon" style={{ left: moonPos.x, top: moonPos.y }}>
+        달
+      </span>
+    </div>
+  )
+}
 
 export function ControlPanel() {
   const {
@@ -39,6 +119,7 @@ export function ControlPanel() {
     showLabels,
     surfaceTemperatureMode,
     closeupInsights,
+    moonPhaseJumpTarget,
     selectedPlanetId,
     setTimeScale,
     setDistanceScale,
@@ -46,6 +127,7 @@ export function ControlPanel() {
     togglePause,
     toggleSurfaceTemperatureMode,
     jumpToSeason,
+    jumpToMoonPhase,
     toggleOrbits,
     toggleLabels,
   } = useSolarSystemStore(
@@ -59,6 +141,7 @@ export function ControlPanel() {
       showLabels: state.showLabels,
       surfaceTemperatureMode: state.surfaceTemperatureMode,
       closeupInsights: state.closeupInsights,
+      moonPhaseJumpTarget: state.moonPhaseJumpTarget,
       selectedPlanetId: state.selectedPlanetId,
       setTimeScale: state.setTimeScale,
       setDistanceScale: state.setDistanceScale,
@@ -66,6 +149,7 @@ export function ControlPanel() {
       togglePause: state.togglePause,
       toggleSurfaceTemperatureMode: state.toggleSurfaceTemperatureMode,
       jumpToSeason: state.jumpToSeason,
+      jumpToMoonPhase: state.jumpToMoonPhase,
       toggleOrbits: state.toggleOrbits,
       toggleLabels: state.toggleLabels,
     })),
@@ -73,6 +157,7 @@ export function ControlPanel() {
 
   const selectedPlanet = selectedPlanetId ? planetMap[selectedPlanetId] : null
   const moonLightPercent = Math.round(closeupInsights.moonLightRatio * 100)
+  const currentPhaseShortName = resolveMoonPhaseShortName(closeupInsights.moonPhaseName)
 
   return (
     <div className="panel">
@@ -183,6 +268,11 @@ export function ControlPanel() {
                 </button>
               ))}
             </div>
+            <p className="seasonJumpTitle">태양-지구-달 상대 위치</p>
+            <OrbitalOverview
+              earthOrbitAngle={closeupInsights.earthOrbitAngle}
+              moonOrbitAngle={closeupInsights.moonOrbitAngle}
+            />
             <p>{closeupInsights.seasonDetail}</p>
             <p>{closeupInsights.tideDetail}</p>
             <p className="closeupLegend">
@@ -210,6 +300,23 @@ export function ControlPanel() {
                 <dd>{closeupInsights.tideName}</dd>
               </div>
             </dl>
+            <p className="seasonJumpTitle">달 위상 바로 이동</p>
+            <div className="seasonJumpRow">
+              {moonPhaseTargets.map((phase) => (
+                <button
+                  key={phase}
+                  className={`seasonJumpButton ${moonPhaseJumpTarget === phase || currentPhaseShortName === phase ? 'active' : ''}`}
+                  onClick={() => jumpToMoonPhase(phase)}
+                >
+                  {phase}
+                </button>
+              ))}
+            </div>
+            <p className="seasonJumpTitle">태양-지구-달 상대 위치</p>
+            <OrbitalOverview
+              earthOrbitAngle={closeupInsights.earthOrbitAngle}
+              moonOrbitAngle={closeupInsights.moonOrbitAngle}
+            />
             <p>태양 방향에 따라 달 표면 음영(명암 경계)이 바뀌며, 확대하면 달 지도의 크레이터/지형 질감을 볼 수 있습니다.</p>
             <p className="closeupLegend">지구 기준 위상: 삭 → 상현 → 보름 → 하현 순서로 관찰됩니다.</p>
           </div>
