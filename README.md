@@ -47,28 +47,68 @@ npm run preview
 - `https://www.youtube.com/shorts/...`
 - `https://www.youtube.com/embed/...`
 
-## GitHub Pages 배포
+## Vercel 배포
 
-이 저장소에는 GitHub Actions 기반 Pages 배포 워크플로우가 포함되어 있습니다.
+현재 운영 배포는 Vercel을 기준으로 관리합니다.
+
+- 운영 URL: `https://solarsystem-weld-psi.vercel.app`
+- Vercel 프로젝트: `solar_system`
+- 프로젝트 연결 정보: `.vercel/project.json`
+
+### 1) 최초 1회 연결
+
+```bash
+npm install
+npm run build
+npm install -g vercel
+vercel login
+vercel
+```
+
+- 최초 `vercel` 실행 시 Vercel 프로젝트가 없으면 새 프로젝트를 만들고, 있으면 현재 저장소를 해당 프로젝트에 연결합니다.
+- 이 저장소는 이미 Vercel 프로젝트 `solar_system`에 연결된 상태입니다.
+
+### 2) 프리뷰 배포
+
+```bash
+vercel
+```
+
+- 브랜치나 작업 중인 상태를 빠르게 확인할 수 있는 프리뷰 URL이 생성됩니다.
+
+### 3) 운영 배포
+
+```bash
+npm run build
+vercel --prod
+```
+
+- 운영 배포가 완료되면 Vercel이 프로덕션 URL과 별칭(alias) URL을 출력합니다.
+- 배포 상태 확인:
+
+```bash
+vercel inspect <deployment-url>
+```
+
+예시:
+
+```bash
+vercel inspect solarsystem-weld-psi.vercel.app
+```
+
+### 4) GitHub 연동
+
+- 현재 GitHub 저장소 `byoh5/solar_system`가 Vercel 프로젝트에 연결되어 있습니다.
+- 이후 자동 배포 정책은 Vercel 대시보드의 Git 설정을 기준으로 관리하면 됩니다.
+
+## GitHub Pages 보조 배포
+
+GitHub Pages 워크플로우도 그대로 유지하고 있습니다.
 
 - 워크플로우 파일: `.github/workflows/deploy-pages.yml`
 - 배포 트리거: `main` 또는 `master` 브랜치 push
-
-### 1) GitHub 저장소 설정
-
-1. GitHub 저장소로 푸시
-2. `Settings > Pages` 이동
-3. `Build and deployment`의 `Source`를 `GitHub Actions`로 설정
-
-### 2) 배포 실행
-
-- `main`/`master`에 push 하면 자동 배포
-- 또는 `Actions > Deploy to GitHub Pages > Run workflow`로 수동 실행
-
-### 3) 배포 주소
-
-- `https://<your-github-id>.github.io/<repo-name>/`
+- 배포 주소 형식: `https://<your-github-id>.github.io/<repo-name>/`
 
 ## 참고
 
-- Vite 설정에서 `base: './'`를 사용해 GitHub Pages의 서브패스 환경에서도 정적 리소스 경로가 동작하도록 구성했습니다.
+- `vite.config.ts`에서는 GitHub Actions 환경일 때만 `base: './'`를 사용하고, Vercel 및 일반 환경에서는 `/`를 사용하도록 구성했습니다.
