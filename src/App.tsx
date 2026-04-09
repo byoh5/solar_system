@@ -1,6 +1,6 @@
 import './App.css'
 import { ControlPanel } from './components/ControlPanel'
-import { KakaoAdSlot } from './components/KakaoAdSlot'
+import { KakaoTopBannerAd } from './components/KakaoTopBannerAd'
 import { LessonVideoLibrary } from './components/LessonVideoLibrary'
 import { SolarSystemScene } from './components/SolarSystemScene'
 import { useSolarSystemStore } from './store/solarSystemStore'
@@ -64,6 +64,8 @@ function App() {
         </div>
       </header>
 
+      <KakaoTopBannerAd />
+
       <main className="contentLayout">
         <section className="sceneArea">
           <div className="sceneViewport">
@@ -78,9 +80,6 @@ function App() {
             <LessonVideoLibrary compact />
           </section>
         </div>
-        <aside className="adRail" aria-label="카카오 광고">
-          <KakaoAdSlot />
-        </aside>
       </main>
     </div>
   )
