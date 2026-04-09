@@ -106,9 +106,9 @@
 }
 
 .topBannerAdFrame {
-  width: 728px;
-  min-width: 728px;
-  min-height: 90px;
+  width: 320px;
+  max-width: 100%;
+  min-height: 100px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -873,10 +873,6 @@ input[type='range'] {
   .topBar {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .topBannerAdShell {
-    display: none;
   }
 
   .topActions {

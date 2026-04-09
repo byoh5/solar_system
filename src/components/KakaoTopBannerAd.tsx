@@ -63,9 +63,9 @@ export function KakaoTopBannerAd() {
         <ins
           className="kakao_ad_area"
           style={{ display: 'none' }}
-          data-ad-unit="DAN-pZ09G0UhCdii4sWQ"
-          data-ad-width="728"
-          data-ad-height="90"
+          data-ad-unit="DAN-Blil5UyPxKSACsgC"
+          data-ad-width="320"
+          data-ad-height="100"
         />
       </div>
     </section>
